@@ -1,0 +1,25 @@
+[project]
+name = "fotil"
+version = "0.1.0"
+description = "Camera photo & video processing utilities"
+authors = [
+    {name = "Chen Yufei", email = "cyfdecyf@gmail.com"},
+]
+dependencies = [
+    "typer>=0.9.0",
+]
+requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "MIT"}
+
+[project.optional-dependencies]
+extra = [
+    "typer[all]>=0.9.0",
+]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+distribution = true
