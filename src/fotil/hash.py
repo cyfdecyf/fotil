@@ -15,13 +15,10 @@ class HashDB:
 
     hash_table_name = 'file_sha1sum'
 
-    def __init__(
-        self, dbfile: Path, max_hash_bytes: int, verbose: bool = False, hex_hash: bool = False
-    ):
+    def __init__(self, dbfile: Path, max_hash_bytes: int, verbose: bool = False):
         self.max_hash_bytes = max_hash_bytes
         self.dbfile = dbfile
         self.verbose = verbose
-        self.hex_hash = hex_hash
 
     @cached_property
     def conn(self) -> sqlite3.Connection:
@@ -30,7 +27,7 @@ class HashDB:
             CREATE TABLE IF NOT EXISTS {self.hash_table_name} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 file_path TEXT UNIQUE,
-                sha1sum BLOB
+                sha1sum TEXT
             );
         """
         # CREATE INDEX idx_file_path ON {self.hash_table_name}(file_path);
@@ -48,7 +45,7 @@ class HashDB:
         return sha1.digest()
 
     def scan_build_hash_db(self, directory: Path) -> None:
-        print(f'scanning {directory} to build hash db')
+        print(f'build hash db, scanning {directory}')
         # sha1sum -> [file_path]
         file_hash: dict[bytes | str, list[Path]] = defaultdict(list)
         for fpath in fs.iter_directory_files(directory):
@@ -65,10 +62,7 @@ class HashDB:
         data = []
         for hash, file_paths in file_hash.items():
             for file_path in file_paths:
-                if self.hex_hash:
-                    data.append((str(file_path), hash.hex()))
-                else:
-                    data.append((str(file_path), hash))
+                data.append((str(file_path), hash.hex()))
 
         # Upsert the data into the database.
         insert_query = f"""
@@ -93,10 +87,7 @@ class HashDB:
         cursor = self.conn.execute(select_all_query)
         for row in cursor:
             _, sha1sum = row
-            if self.hex_hash:
-                self.hashes.add(bytes.fromhex(sha1sum))
-            else:
-                self.hashes.add(sha1sum)
+            self.hashes.add(bytes.fromhex(sha1sum))
 
     def file_exists(self, fpath: Path) -> bool:
         h = self.sha1sum(fpath)

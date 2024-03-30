@@ -9,9 +9,7 @@ from . import app, state
 
 
 def scan_build_hash_db_one(imp: config.ImportConfig):
-    hdb = HashDB(
-        imp.dst_dir / imp.hash_db, imp.hash_bytes, hex_hash=imp.hex_hash, verbose=state['verbose']
-    )
+    hdb = HashDB(imp.dst_dir / imp.hash_db, imp.hash_bytes, verbose=state['verbose'])
     hdb.scan_build_hash_db(imp.dst_dir)
     if imp.ref_dir:
         for ref_dir in imp.ref_dir:
