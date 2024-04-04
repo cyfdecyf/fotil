@@ -34,7 +34,7 @@ test = [
 ]
 
 [tool.ruff]
-line-length    = 99
+line-length    = 90
 target-version = "py311"
 
 [tool.ruff.lint]
