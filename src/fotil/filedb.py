@@ -8,9 +8,9 @@ from pathlib import Path
 from . import fs
 
 
-class HashDB:
+class FileDB:
     """
-    HashDB contains
+    FileDB maintains file hashes which is used to check if file has already been imported.
     """
 
     hash_table_name = 'file_sha1sum'
@@ -44,7 +44,7 @@ class HashDB:
             sha1.update(f.read(self.max_hash_bytes))
         return sha1.digest()
 
-    def scan_build_hash_db(self, directory: Path) -> None:
+    def scan(self, directory: Path) -> None:
         print(f'build hash db, scanning {directory}')
         # sha1sum -> [file_path]
         file_hash: dict[bytes | str, list[Path]] = defaultdict(list)
@@ -79,7 +79,7 @@ class HashDB:
         if self.verbose:
             print(f'Upserted {self.conn.total_changes} records to hash database')
 
-    def load_all_hashes(self):
+    def load(self):
         select_all_query = f"""
             SELECT file_path, sha1sum FROM {self.hash_table_name}
         """
