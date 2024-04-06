@@ -4,7 +4,7 @@ from pathlib import Path
 
 def iter_directory_files(
     directory: Path,
-    filter_file: Callable[[Path], bool] | None = None,
+    file_filter: Callable[[Path], bool] | None = None,
     _root_dir: Path | None = None,
 ):
     """
@@ -12,7 +12,7 @@ def iter_directory_files(
 
     Args:
         directory (Path): The directory to start iterating from.
-        filter_file (callable, optional): A callable function used to filter files.
+        file_filter (Callable, optional): A callable function used to filter files.
             Only files for which the function returns True will be yielded.
             Defaults to None.
 
@@ -20,7 +20,7 @@ def iter_directory_files(
         Path: The relative path to directory of each file that matches the
             `filter_file` criteria.
     """
-    if filter_file is not None and not callable(filter_file):
+    if file_filter is not None and not callable(file_filter):
         msg = 'filter_file must be callable.'
         raise ValueError(msg)
 
@@ -31,7 +31,7 @@ def iter_directory_files(
     for f in sorted(directory.iterdir()):
         if f.is_dir() and not f.name.startswith('.'):
             # Recursive call.
-            yield from iter_directory_files(f, filter_file, _root_dir=_root_dir)
+            yield from iter_directory_files(f, file_filter, _root_dir=_root_dir)
         elif not has_file and f.is_file():
             has_file = True
 
@@ -40,5 +40,5 @@ def iter_directory_files(
 
     # To save memory, do not cache listed files in the first iteration.
     for f in sorted(directory.iterdir()):
-        if f.is_file() and ((filter_file is None) or filter_file(f)):
+        if f.is_file() and ((file_filter is None) or file_filter(f)):
             yield f.relative_to(_root_dir)

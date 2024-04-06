@@ -2,6 +2,7 @@ import hashlib
 import sqlite3
 
 from collections import defaultdict
+from collections.abc import Callable
 from functools import cached_property
 from pathlib import Path
 
@@ -44,11 +45,15 @@ class FileDB:
             sha1.update(f.read(self.max_hash_bytes))
         return sha1.digest()
 
-    def scan(self, directory: Path) -> None:
+    def scan(
+        self,
+        directory: Path,
+        file_filter: Callable[[Path], bool] | None = None,
+    ) -> None:
         print(f'build hash db, scanning {directory}')
         # sha1sum -> [file_path]
         file_hash: dict[bytes | str, list[Path]] = defaultdict(list)
-        for fpath in fs.iter_directory_files(directory):
+        for fpath in fs.iter_directory_files(directory, file_filter=file_filter):
             h = self.sha1sum(directory / fpath)
             if self.verbose:
                 print(f'hash: {h.hex()} file: {fpath}')

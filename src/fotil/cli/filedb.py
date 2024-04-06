@@ -20,7 +20,7 @@ def _scan_one(import_conf: config.ImportConfig):
     fdb.scan(import_conf.dst_dir)
     if import_conf.ref_dir:
         for ref_dir in import_conf.ref_dir:
-            fdb.scan(ref_dir)
+            fdb.scan(ref_dir, file_filter=import_conf.file_filter)
 
 
 @app.command()

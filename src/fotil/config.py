@@ -28,6 +28,9 @@ class ImportConfig(BaseModel):
     dedup: bool = True
     hash_db: str = '.fotil.sqlite3'
 
+    def file_filter(self, f: Path) -> bool:
+        return f.suffix.lower() in self.suffixes
+
 
 class Config(BaseModel):
     importer: dict[str, ImportConfig]
