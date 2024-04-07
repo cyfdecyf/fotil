@@ -20,6 +20,10 @@ class FileDB:
         self.max_hash_bytes = max_hash_bytes
         self.dbfile = dbfile
         self.verbose = verbose
+        self.hash2file: dict[bytes, list[Path]] = defaultdict(list)
+        self._pending_file_hash: list[tuple[str, str]] = []
+
+        self.load()
 
     @cached_property
     def conn(self) -> sqlite3.Connection:
@@ -35,65 +39,85 @@ class FileDB:
         conn.execute(create_table_query)
         return conn
 
-    def close(self) -> None:
-        self.conn.close()
-
-    def sha1sum(self, fpath: Path | str) -> bytes | str:
+    def sha1sum(self, fpath: Path | str) -> bytes:
         """Calculate sh1sum for the starting max_length bytes."""
         sha1 = hashlib.sha1()
         with open(fpath, 'rb') as f:
             sha1.update(f.read(self.max_hash_bytes))
         return sha1.digest()
 
-    def scan(
-        self,
-        directory: Path,
-        file_filter: Callable[[Path], bool] | None = None,
-    ) -> None:
-        print(f'build hash db, scanning {directory}')
-        # sha1sum -> [file_path]
-        file_hash: dict[bytes | str, list[Path]] = defaultdict(list)
-        for fpath in fs.iter_directory_files(directory, file_filter=file_filter):
-            h = self.sha1sum(directory / fpath)
-            if self.verbose:
-                print(f'hash: {h.hex()} file: {fpath}')
-            flist = file_hash[h]
-            flist.append(fpath)
-            if len(flist) > 1:
-                str_flist = '\n'.join(f'\t{f}' for f in flist)
-                print(f'Duplicate files:\n{str_flist}')
+    def exists(self, hashsum: bytes):
+        return hashsum in self.hash2file
 
-        # Prepare the data for insertion.
-        data = []
-        for hash, file_paths in file_hash.items():
-            for file_path in file_paths:
-                data.append((str(file_path), hash.hex()))
+    def upsert(self, fpath: Path, hashsum: bytes) -> bool:
+        flist = self.hash2file[hashsum]
+        if fpath in flist:
+            return False
 
+        flist.append(fpath)
+        if len(flist) >= 2:
+            str_flist = '\n'.join(f'\t{f}' for f in flist)
+            print(f'duplicate files:\n{str_flist}')
+
+        self._pending_file_hash.append((str(fpath), hashsum.hex()))
+        return True
+
+    def commit(self) -> None:
         # Upsert the data into the database.
         insert_query = f"""
             INSERT INTO {self.hash_table_name} (file_path, sha1sum)
             VALUES (?, ?)
             ON CONFLICT(file_path) DO UPDATE SET sha1sum = excluded.sha1sum
         """
+        if len(self._pending_file_hash) == 0:
+            return
+
         try:
-            self.conn.executemany(insert_query, data)
-            self.conn.commit()
+            with self.conn:
+                self.conn.executemany(insert_query, self._pending_file_hash)
         except Exception as e:
-            print(f'Error inserting data into the database: {e}')
+            print(f'error inserting file hashsum into database: {e}')
 
         if self.verbose:
-            print(f'Upserted {self.conn.total_changes} records to hash database')
+            print(f'upserted {len(self._pending_file_hash)} records to hash database')
+        self._pending_file_hash.clear()
+
+    def scan(
+        self,
+        directory: Path,
+        file_filter: Callable[[Path], bool] | None = None,
+    ) -> None:
+        print(f'filedb scanning {directory}')
+        for fpath in fs.iter_directory_files(directory, file_filter=file_filter):
+            h = self.sha1sum(directory / fpath)
+            if self.exists(h):
+                if self.verbose:
+                    print(f'already in filedb: {fpath}')
+                continue
+
+            if self.verbose:
+                print(f'hash: {h.hex()} file: {fpath}')
+            self.upsert(fpath, h)
+
+        self.commit()
 
     def load(self):
         select_all_query = f"""
             SELECT file_path, sha1sum FROM {self.hash_table_name}
         """
-        self.hashes = set()
         cursor = self.conn.execute(select_all_query)
         for row in cursor:
-            _, sha1sum = row
-            self.hashes.add(bytes.fromhex(sha1sum))
+            fpath, sha1sum = row
+            hashbytes = bytes.fromhex(sha1sum)
+            self.hash2file[hashbytes].append(Path(fpath))
 
-    def file_exists(self, fpath: Path) -> bool:
-        h = self.sha1sum(fpath)
-        return h in self.hashes
+
+_file_db: dict[Path | str, FileDB] = {}
+
+
+def get(dbfile: Path, max_hash_bytes: int, verbose: bool = False) -> FileDB:
+    db = _file_db.get(dbfile)
+    if not db:
+        db = FileDB(dbfile, max_hash_bytes, verbose=verbose)
+        _file_db[dbfile] = db
+    return db

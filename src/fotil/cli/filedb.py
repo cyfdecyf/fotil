@@ -2,8 +2,7 @@ from typing import Optional
 
 import typer
 
-from fotil import config
-from fotil.filedb import FileDB
+from fotil import config, filedb
 
 from . import state
 
@@ -12,7 +11,7 @@ app = typer.Typer()
 
 
 def _scan_one(import_conf: config.ImportConfig):
-    fdb = FileDB(
+    fdb = filedb.get(
         import_conf.dst_dir / import_conf.hash_db,
         import_conf.hash_bytes,
         verbose=state['verbose'],
