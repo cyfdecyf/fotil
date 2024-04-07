@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
 
@@ -7,12 +7,12 @@ from fotil import config, filedb
 from . import state
 
 
-app = typer.Typer()
+app = typer.Typer(help='Manage file database.')
 
 
 def _scan_one(import_conf: config.ImportConfig):
     fdb = filedb.get(
-        import_conf.dst_dir / import_conf.hash_db,
+        import_conf.filedb_path,
         import_conf.hash_bytes,
         verbose=state['verbose'],
     )
@@ -23,16 +23,21 @@ def _scan_one(import_conf: config.ImportConfig):
 
 
 @app.command()
-def scan(importer: Optional[str] = None):  # noqa: UP007
+def scan(
+    importer: Annotated[
+        Optional[str], typer.Option('--importer', '-i', help='name of the importer')  # noqa: UP007
+    ] = None,
+):
     """
     Scan dst_dir in importer and build hash db under that dir.
     """
     config = state['config']
     if importer and importer not in config.importer:
-        print(f'Importer "{importer}" not found in config')
+        print(f'importer "{importer}" not found in config')
         typer.Exit(code=1)
 
     imps = config.importer.values() if importer is None else [config.importer[importer]]
 
     for imp in imps:
-        _scan_one(imp)
+        if imp.enabled:
+            _scan_one(imp)
