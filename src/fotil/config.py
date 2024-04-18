@@ -5,7 +5,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 
-SUFFIX_SET = {'.jpg', '.jpeg', '.mov', '.mp4', '.aae', '.heic', '.hif', '.raf'}
+SUFFIX_SET = {'.jpg', '.jpeg', '.mov', '.mp4', '.heic', '.hif', '.raf'}
 
 
 class ImportConfig(BaseModel):
