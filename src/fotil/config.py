@@ -2,13 +2,13 @@ import tomllib
 
 from pathlib import Path
 
-from pydantic import BaseModel
+from msgspec import Struct, field
 
 
-SUFFIX_SET = {'.jpg', '.jpeg', '.mov', '.mp4', '.heic', '.hif', '.raf'}
+DEFAULT_SUFFIXES = ('.jpg', '.jpeg', '.mov', '.mp4', '.heic', '.hif', '.raf')
 
 
-class ImportConfig(BaseModel):
+class ImportConfig(Struct):
     """
     ImportDir defines import src and target directory, along with other
     settings.
@@ -23,10 +23,10 @@ class ImportConfig(BaseModel):
 
     src_dir: Path
     dst_dir: Path
+    keep_src_dir: bool
     ref_dir: list[Path] | None = None
     hash_bytes: int = 1 * 1024**2  # 1MB by default.
-    suffixes: set[str] = SUFFIX_SET
-    keep_src_dir: bool
+    suffixes: set[str] = field(default_factory=lambda: set(DEFAULT_SUFFIXES))
     dedup: bool = True
     hash_db: str = '.fotil.sqlite3'
     enabled: bool = True
@@ -39,7 +39,7 @@ class ImportConfig(BaseModel):
         return self.dst_dir / self.hash_db
 
 
-class Config(BaseModel):
+class Config(Struct):
     importer: dict[str, ImportConfig]
 
 
