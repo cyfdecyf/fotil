@@ -6,7 +6,7 @@ authors = [
     {name = "Chen Yufei", email = "cyfdecyf@gmail.com"},
 ]
 dependencies = [
-    "typer>=0.9.0",
+    "typer[all]>=0.12.3",
     "msgspec>=0.18.6",
 ]
 requires-python = ">=3.11"
@@ -15,11 +15,6 @@ license = {text = "MIT"}
 
 [project.scripts]
 fotil = "fotil.cli.main:app"
-
-[project.optional-dependencies]
-extra = [
-    "typer[all]>=0.9.0",
-]
 
 [build-system]
 requires = ["pdm-backend"]
