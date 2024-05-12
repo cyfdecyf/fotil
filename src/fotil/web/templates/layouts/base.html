@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include "includes/header.html" %}
+
+    {% block title %}<title>Fotil - camera photo/video utilities</title>{% endblock title %}
+
+    <!-- Specific CSS goes HERE -->
+    {% block stylesheets %}{% endblock stylesheets %}
+</head>
+<body class="m-0 font-sans antialiased font-normal text-size-base leading-default bg-gray-50 text-slate-500">
+
+{% include "includes/sidebar.html" %}
+
+<main class="ease-soft-in-out xl:ml-68.5 relative h-full max-h-screen rounded-xl transition-all duration-200">
+
+    {% include "includes/navigation.html" %}
+
+    {% block content %}{% endblock content %}
+
+</main>
+
+{% include "includes/fixed-plugin.html" %}
+
+</body>
+
+{% include "includes/scripts.html" %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}{% endblock javascripts %}
+
+</html>
