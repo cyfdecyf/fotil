@@ -2,7 +2,8 @@ from typing import Annotated, Optional
 
 import typer
 
-from fotil import config, filedb
+from fotil import filedb
+from fotil.config import ImportConfig
 
 from . import state
 
@@ -10,7 +11,7 @@ from . import state
 app = typer.Typer(help='Manage file database.')
 
 
-def _scan_one(import_conf: config.ImportConfig):
+def _scan_one(import_conf: ImportConfig):
     fdb = filedb.get(
         import_conf.filedb_path,
         import_conf.hash_bytes,

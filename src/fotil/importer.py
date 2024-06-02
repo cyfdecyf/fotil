@@ -3,14 +3,15 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from . import config, filedb, fs
+from . import filedb, fs
+from .config import ImportConfig
 from .exiftool import Exiftool
 
 
 class Importer:
     def __init__(
         self,
-        conf: config.ImportConfig,
+        conf: ImportConfig,
         verbose: bool = False,
         dry_run: bool = False,
         batch_size: int = 50,
