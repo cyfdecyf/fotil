@@ -29,6 +29,7 @@ test = [
 ]
 dev = [
     "ipython>=8.25.0",
+    "ruff>=0.4.7",
 ]
 
 [tool.ruff]
