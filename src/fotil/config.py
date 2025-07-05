@@ -8,7 +8,7 @@ from msgspec import Struct, field
 
 DEFAULT_VIDEO_SUFFIXES = {'.mov', '.mp4'}
 DEFAULT_RAW_SUFFIXES = {'.arw', '.cr2', '.dng', '.nef', '.raf'}
-DEFAULT_PIC_SUFFIXES = {'.heic', '.hif', '.jpeg', '.jpg', '.png'}
+DEFAULT_PIC_SUFFIXES = {'.heic', '.hif', '.jpeg', '.jpg', '.png', '.jxl'}
 DEFAULT_SUFFIXES = DEFAULT_VIDEO_SUFFIXES | DEFAULT_RAW_SUFFIXES | DEFAULT_PIC_SUFFIXES
 
 
