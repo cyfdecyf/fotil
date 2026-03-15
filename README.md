@@ -11,7 +11,5 @@
 Run the following command:
 
 ```
-pdm install [-G extra]
+uv sync
 ```
-
-`-G extra` is optional, it installs optional dependencies.
