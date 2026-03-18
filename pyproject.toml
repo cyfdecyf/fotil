@@ -14,7 +14,7 @@ readme = "README.md"
 license = {text = "MIT"}
 
 [project.scripts]
-fotil = "fotil.cli.main:app"
+fotil = "fotil.__main__:app"
 
 [dependency-groups]
 test = [
