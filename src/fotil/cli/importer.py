@@ -5,7 +5,7 @@ import typer
 from fotil import config
 from fotil.importer import Importer
 
-from . import app, state
+from . import app, state, get_config
 
 
 def _import(import_conf: config.ImportConfig, dry_run: bool):
@@ -23,12 +23,12 @@ def importer(
     """
     Import src_dir in import config to dst_dir.
     """
-    config = state['config']
-    if imp and imp not in config.importer:
+    conf = get_config()
+    if imp and imp not in conf.importer:
         print(f'importer "{imp}" not found in config')
         typer.Exit(code=1)
 
-    imps = config.importer.values() if imp is None else [config.importer[imp]]
+    imps = conf.importer.values() if imp is None else [conf.importer[imp]]
 
     for i in imps:
         if i.enabled:

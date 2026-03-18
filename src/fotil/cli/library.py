@@ -5,7 +5,7 @@ import typer
 
 from fotil.library import Library
 
-from . import state
+from . import state, get_config
 
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ def cleanup_raw(
     pic_dir: Optional[Path] = None,  # noqa: UP007
     dry_run: Optional[bool] = False,  # noqa: UP007
 ):
-    conf: Config = state['config']
+    conf = get_config()
     lib_conf = conf.library[library]
 
     raw_dir = raw_dir.absolute()

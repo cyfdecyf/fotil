@@ -5,7 +5,7 @@ import typer
 from fotil import filedb
 from fotil.config import ImportConfig
 
-from . import state
+from . import state, get_config
 
 
 app = typer.Typer(help='Manage file database.')
@@ -32,12 +32,12 @@ def scan(
     """
     Scan dst_dir in importer and build hash db under that dir.
     """
-    config = state['config']
-    if importer and importer not in config.importer:
+    conf = get_config()
+    if importer and importer not in conf.importer:
         print(f'importer "{importer}" not found in config')
         typer.Exit(code=1)
 
-    imps = config.importer.values() if importer is None else [config.importer[importer]]
+    imps = conf.importer.values() if importer is None else [conf.importer[importer]]
 
     for imp in imps:
         if imp.enabled:
