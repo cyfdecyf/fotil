@@ -13,12 +13,16 @@ app = typer.Typer(help='Picture processing utilities.')
 
 @app.command()
 def cleanup_raw(
-    library: Annotated[str, typer.Option('--library', '-l', help='Name of the library.')],
     raw_dir: Path,
     pic_dir: Path | None = None,
+    library: Annotated[
+        str | None, typer.Option('--library', '-l', help='Name of the library.')
+    ] = None,
     dry_run: bool = False,
 ):
     conf = get_config()
+    if library is None:
+        library = conf.default_library
     lib_conf = conf.library[library]
 
     raw_dir = raw_dir.absolute()

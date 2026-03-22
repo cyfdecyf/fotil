@@ -12,6 +12,8 @@ state = {
     '_config_cache': None,
 }
 
+DEFAULT_CONFIG_PATH = Path('~/.config/fotil/fotil.toml').expanduser()
+
 app = typer.Typer(
     name='fotil',
     help='Camera photo & video utilities.',
@@ -43,7 +45,7 @@ def cli_opts(
     verbose: bool = False,
     conf: Annotated[
         Path, typer.Option('--config', '-c', help='Path to config file.')
-    ] = './fotil.toml',
+    ] = DEFAULT_CONFIG_PATH,
 ):
     state['verbose'] = verbose
     state['_config_path'] = conf

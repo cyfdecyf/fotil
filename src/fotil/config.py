@@ -77,6 +77,7 @@ class LibraryConfig(Struct):
 
 
 class Config(Struct):
+    default_library: str
     library: dict[str, LibraryConfig]
     importer: dict[str, ImportConfig]
 
