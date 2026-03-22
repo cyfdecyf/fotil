@@ -1,11 +1,11 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 
 from fotil import filedb
 from fotil.config import ImportConfig
 
-from . import state, get_config
+from . import get_config, state
 
 
 app = typer.Typer(help='Manage file database.')
@@ -26,7 +26,7 @@ def _scan_one(import_conf: ImportConfig):
 @app.command()
 def scan(
     importer: Annotated[
-        Optional[str], typer.Option('--importer', '-i', help='name of the importer')  # noqa: UP007
+        str | None, typer.Option('--importer', '-i', help='name of the importer')
     ] = None,
 ):
     """

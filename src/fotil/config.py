@@ -35,7 +35,7 @@ class ImportConfig(Struct):
     dst_dir: Path
     keep_src_dir: bool
     ref_dir: list[Path] | None = None
-    hash_bytes: int = 1 * 1024 ** 2  # 1MB by default.
+    hash_bytes: int = 1 * 1024**2  # 1MB by default.
     suffixes: set[str] = field(default_factory=lambda: DEFAULT_SUFFIXES.copy())
     dedup: bool = True
     hash_db: str = '.fotil.sqlite3'
@@ -77,8 +77,8 @@ class LibraryConfig(Struct):
 
 
 class Config(Struct):
-    library: dict[str, LibraryConfig] | None = None
-    importer: dict[str, ImportConfig] | None = None
+    library: dict[str, LibraryConfig]
+    importer: dict[str, ImportConfig]
 
 
 def load_config(fname: Path | str) -> Config:
