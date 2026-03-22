@@ -84,8 +84,8 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "msgspec", specifier = ">=0.18.6" },
-    { name = "typer", specifier = ">=0.12.3" },
+    { name = "msgspec", specifier = ">=0.20.0" },
+    { name = "typer", specifier = ">=0.24.1" },
 ]
 
 [package.metadata.requires-dev]
