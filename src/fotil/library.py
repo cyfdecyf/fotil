@@ -18,7 +18,7 @@ class Library:
             self.verbose = True
 
     def cleanup_raw(self, pic_dir: Path, raw_dir: Path):
-        """Remove raw files that have been processed.
+        """Remove raw files that have no corresponding processed files.
 
         Args:
             raw_dir (Path): directory containing raw files to clean up
@@ -33,7 +33,7 @@ class Library:
         trash_dir_printed = False
 
         for f in iter_directory_files(raw_dir, file_filter=self.conf.raw_file_filter):
-            if f.stem not in pic_files:
+            if f.stem in pic_files:
                 continue
 
             src = (raw_dir / f).absolute()
@@ -42,8 +42,8 @@ class Library:
             if not trash_dir_printed:
                 print(f'trash_dir: {trash_dir}')
                 trash_dir_printed = True
+                trash_dir.mkdir(parents=True, exist_ok=True)
 
             print(f'trashing {f}')
             if not self.dry_run:
-                trash_dir.mkdir(parents=True, exist_ok=True)
                 src.rename(trash_dir / src.name)
