@@ -5,7 +5,7 @@ import typer
 
 from fotil.library import Library
 
-from . import get_config, state
+from . import cli_options, get_config
 
 
 app = typer.Typer(help='Picture processing utilities.')
@@ -42,5 +42,5 @@ def cleanup_raw(
         # For pic_dir, we allow it to be outside the library pic_dir.
         pic_dir = pic_dir.absolute()
 
-    lib = Library(conf=lib_conf, verbose=state['verbose'], dry_run=dry_run)
+    lib = Library(conf=lib_conf, verbose=cli_options.verbose, dry_run=dry_run)
     lib.cleanup_raw(pic_dir, raw_dir)

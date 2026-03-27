@@ -6,6 +6,8 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
+from fotil.cli import cli_options
+
 
 EXIF_DATE_TAGS = ['CreateDate', 'DateTimeOriginal', 'ModifyDate', 'DateCreated']
 
@@ -43,12 +45,13 @@ class Exiftool:
     Exiftool class to handle exiftool command line operations.
     """
 
-    def __init__(self, exiftool_path: str | None = None) -> None:
-        self.exiftool_path = exiftool_path if exiftool_path else shutil.which('exiftool')
+    def __init__(self, exiftool_path: str | None = None, verbose: bool = False) -> None:
+        exiftool_path = exiftool_path if exiftool_path else shutil.which('exiftool')
+        if exiftool_path is None:
+            raise FileNotFoundError(f'exiftool not found')
 
-        if self.exiftool_path is None:
-            msg = 'exiftool not found in PATH'
-            raise FileNotFoundError(msg)
+        self.exiftool_path: Path = Path(exiftool_path)
+        self.verbose: bool = cli_options.verbose
 
     def read(
         self,
@@ -119,3 +122,97 @@ class Exiftool:
 
         msg = f'no date tag found in exif metadata for {exif["SourceFile"]}'
         raise ValueError(msg)
+
+    def write(
+        self,
+        fpaths: list[Path],
+        tags: dict[str, str],
+        overwrite_original: bool = False,
+    ) -> None:
+        """Write metadata to files.
+
+        Args:
+            fpaths: List of file paths to write to.
+            tags: Dictionary of tag names and values to write.
+            overwrite_original: If True, overwrite original files instead of creating backups.
+        """
+        cmd = [str(self.exiftool_path), '-api', 'largefilesupport=1', '-quiet']
+
+        if overwrite_original:
+            cmd.append('-overwrite_original')
+
+        for tag, value in tags.items():
+            if tag == 'SourceFile':
+                continue
+            cmd.append(f'-{tag}={value}')
+
+        cmd.extend([str(f) for f in fpaths])
+
+        if self.verbose:
+            print(f'Running: {" ".join(cmd)}')
+
+        subprocess.run(cmd, check=True)
+
+    def geotag(
+        self,
+        fpaths: list[Path],
+        gpslog: list[Path],
+        overwrite_original: bool = False,
+    ) -> None:
+        """Add geotag to files using GPS log files.
+
+        Args:
+            fpaths: List of file paths to geotag.
+            gpslog: List of GPS log file paths.
+            overwrite_original: If True, overwrite original files.
+        """
+        cmd = [str(self.exiftool_path), '-api', 'largefilesupport=1', '-quiet']
+
+        if overwrite_original:
+            cmd.append('-overwrite_original')
+
+        for log in gpslog:
+            cmd.extend(['-geotag', str(log)])
+
+        cmd.extend([str(f) for f in fpaths])
+
+        if self.verbose:
+            print(f'Running: {" ".join(cmd)}')
+
+        _ = subprocess.run(cmd, check=True)
+
+    def shift_time(
+        self,
+        fpaths: list[Path],
+        time_shift: int,
+        tags: list[str] | None = None,
+        overwrite_original: bool = False,
+    ) -> None:
+        """Shift time in EXIF metadata.
+
+        Args:
+            fpaths: List of file paths to shift time.
+            time_shift: Time shift in hours (can be negative).
+            tags: List of tag names to shift. If None, defaults to all date tags.
+            overwrite_original: If True, overwrite original files.
+        """
+        if tags is None:
+            tags = EXIF_DATE_TAGS
+
+        cmd = [str(self.exiftool_path), '-api', 'largefilesupport=1', '-quiet']
+
+        if overwrite_original:
+            cmd.append('-overwrite_original')
+
+        sign = '-' if time_shift < 0 else '+'
+        shift = abs(time_shift)
+
+        for tag in tags:
+            cmd.append(f'-{tag}{sign}={shift}')
+
+        cmd.extend([str(f) for f in fpaths])
+
+        if self.verbose:
+            print(f'Running: {" ".join(cmd)}')
+
+        _ = subprocess.run(cmd, check=True)

@@ -8,14 +8,10 @@ class Library:
     def __init__(
         self,
         conf: LibraryConfig,
-        verbose: bool = False,
         dry_run: bool = False,
     ) -> None:
-        self.conf = conf
-        self.verbose = verbose
-        self.dry_run = dry_run
-        if self.dry_run:
-            self.verbose = True
+        self.conf: LibraryConfig = conf
+        self.dry_run: bool = dry_run
 
     def cleanup_raw(self, pic_dir: Path, raw_dir: Path):
         """Remove raw files that have no corresponding processed files.

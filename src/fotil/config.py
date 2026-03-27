@@ -76,10 +76,18 @@ class LibraryConfig(Struct):
         return f.suffix.lower() in self.pic_suffixes
 
 
+class GeotagConfig(Struct):
+    gpslog_dir: Path | None = None
+    default_timezone: str = 'auto'
+    default_pattern: str = '*.jpg'
+    tag_file: str = 'tag.jpg'
+
+
 class Config(Struct):
     default_library: str
     library: dict[str, LibraryConfig]
     importer: dict[str, ImportConfig]
+    geotag: GeotagConfig = field(default_factory=GeotagConfig)
 
 
 def load_config(fname: Path | str) -> Config:

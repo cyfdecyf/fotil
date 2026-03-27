@@ -5,11 +5,11 @@ import typer
 from fotil import config
 from fotil.importer import Importer
 
-from . import app, state, get_config
+from . import app, cli_options, get_config
 
 
 def _import(import_conf: config.ImportConfig, dry_run: bool):
-    imp = Importer(import_conf, verbose=state['verbose'], dry_run=dry_run)
+    imp = Importer(import_conf, verbose=cli_options.verbose, dry_run=dry_run)
     imp.import_to_dst()
 
 

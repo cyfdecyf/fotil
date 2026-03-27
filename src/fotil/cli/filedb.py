@@ -5,7 +5,7 @@ import typer
 from fotil import filedb
 from fotil.config import ImportConfig
 
-from . import get_config, state
+from . import cli_options, get_config
 
 
 app = typer.Typer(help='Manage file database.')
@@ -15,7 +15,7 @@ def _scan_one(import_conf: ImportConfig):
     fdb = filedb.get(
         import_conf.filedb_path,
         import_conf.hash_bytes,
-        verbose=state['verbose'],
+        verbose=cli_options.verbose,
     )
     fdb.scan(import_conf.dst_dir)
     if import_conf.ref_dir:

@@ -1,0 +1,480 @@
+"""Geotagging business logic."""
+
+import importlib.resources as resources
+import re
+
+from datetime import datetime as dt
+from pathlib import Path
+from typing import Annotated
+
+import typer
+
+from fotil.exiftool import (
+    EXIF_DATE_TAGS,
+    EXIF_VIDEO_DATE_TAGS,
+    GPS_TAGS,
+    Exiftool,
+)
+
+from . import cli_options
+
+
+# Camera model tags mapping
+EXIF_CAMERA_MODEL_TAGS = {
+    'Make': None,
+    'Model': None,
+    'DeviceManufacturer': 'Make',
+    'DeviceModelName': 'Model',
+}
+
+DEFAULT_CAMERA_MODEL = {
+    'SONY': 'ICLE-7M4',
+}
+
+# File naming patterns for camera detection
+_FNAME_RE_SONY_VIDEO = re.compile(r'C\d\d\d\d.*\.MP4')
+_FNAME_RE_SONY_IMAGE = re.compile(r'DSC\d\d\d\d.*')
+
+# Local timezone offset in hours
+_local_tz_offset = dt.utcnow().astimezone().utcoffset()
+LOCAL_TZ_SHIFT_HOUR = (
+    int(_local_tz_offset.total_seconds() / 3600) if _local_tz_offset else 0
+)
+
+
+def guess_camera_maker(fname: Path) -> str | None:
+    """Guess camera manufacturer from file name or EXIF data.
+
+    Args:
+        fname: Path to the file.
+
+    Returns:
+        Camera manufacturer name or None.
+    """
+    if _FNAME_RE_SONY_IMAGE.match(fname.name) or _FNAME_RE_SONY_VIDEO.match(fname.name):
+        print('guessed SONY camera file')
+        return 'SONY'
+
+    if fname.name.startswith('DSCF'):
+        print('guessed Fujifilm camera file')
+        return 'Fujifilm'
+
+    exif = Exiftool()
+    tags = exif.read([fname], tags=['Make'])
+    if tags and 'Make' in tags[0]:
+        return tags[0]['Make']
+
+    return None
+
+
+def _canonic_camera_model_tag(fname: Path, tag_values: dict[str, str]) -> None:
+    """Convert camera model tags to canonical form.
+
+    Args:
+        fname: Path to the file.
+        tag_values: Dictionary of tag values to update.
+    """
+    for tag, canonic_tag in EXIF_CAMERA_MODEL_TAGS.items():
+        if canonic_tag is None or tag not in tag_values:
+            continue
+
+        tag_values[canonic_tag] = tag_values[tag]
+        del tag_values[tag]
+
+    if 'Make' not in tag_values:
+        maker = guess_camera_maker(fname)
+        if maker:
+            tag_values['Make'] = maker
+
+    if 'Model' not in tag_values:
+        maker = tag_values.get('Make')
+        model = DEFAULT_CAMERA_MODEL.get(maker) if maker else None
+        if model:
+            tag_values['Model'] = model
+
+
+def _guess_video_file_time_zone(fname: Path) -> int:
+    """Guess video file timezone based on camera.
+
+    Args:
+        fname: Path to the video file.
+
+    Returns:
+        Timezone offset in hours.
+    """
+    maker = guess_camera_maker(fname)
+    if maker in ('Fujifilm',):
+        return LOCAL_TZ_SHIFT_HOUR
+    return 0
+
+
+def _shift_to_utc_timezone(timezone: int) -> int:
+    """Convert timezone offset to UTC offset.
+
+    Args:
+        timezone: Timezone offset in hours.
+
+    Returns:
+        UTC offset in hours.
+    """
+    return -timezone
+
+
+def _shift_to_local_timezone(timezone: int) -> int:
+    """Convert timezone offset to local timezone offset.
+
+    Args:
+        timezone: Timezone offset in hours.
+
+    Returns:
+        Local timezone offset in hours.
+    """
+    utcshift = _shift_to_utc_timezone(timezone)
+    return utcshift + LOCAL_TZ_SHIFT_HOUR
+
+
+def _filter_files_with_tags(
+    fpaths: list[Path], tags: list[str], verbose: bool = False
+) -> list[Path]:
+    """Filter out files that already have the specified tags.
+
+    Args:
+        fpaths: List of file paths.
+        tags: List of tag names to check.
+        verbose: Whether to print verbose output.
+
+    Returns:
+        List of file paths that don't have the specified tags.
+    """
+    exif = Exiftool()
+    notag_fpaths = []
+    skip_files = []
+
+    for f in fpaths:
+        metadata = exif.read([f], tags=tags)
+        if metadata and len(metadata[0]) == 0:
+            notag_fpaths.append(f)
+        else:
+            skip_files.append(f)
+
+    if verbose and skip_files:
+        print(f'skip files: {", ".join(str(f) for f in skip_files)}')
+
+    return notag_fpaths
+
+
+def _expand_directories(fpaths: list[Path], pattern: str | None = None) -> list[Path]:
+    """Expand directories to list of matching files.
+
+    Args:
+        fpaths: List of file paths or directories.
+        pattern: Glob pattern to match files in directories.
+
+    Returns:
+        List of file paths.
+    """
+    if pattern is None:
+        return [f for f in fpaths if f.is_file()]
+
+    result = []
+    for f in fpaths:
+        if f.is_dir():
+            matches = sorted(f.glob(pattern))
+            result.extend(matches)
+        else:
+            result.append(f)
+
+    return result
+
+
+def is_video(fname: Path) -> bool:
+    """Check if file is a video file.
+
+    Args:
+        fname: Path to the file.
+
+    Returns:
+        True if file is a video.
+    """
+    return fname.suffix.lower() in ('.mov', '.mp4')
+
+
+def _get_tag_file() -> Path:
+    """Get the path to the tag.jpg resource file.
+
+    Returns:
+        Path to tag.jpg.
+    """
+    with resources.as_file(resources.files('fotil.static') / 'tag.jpg') as p:
+        return p
+
+
+# ---- CLI commands ----
+
+app = typer.Typer(help='Geotagging operations.')
+
+
+@app.command(name='shift')
+def shift_time(
+    shift: Annotated[int, typer.Argument(help='Time shift in hours')],
+    fpaths: Annotated[
+        list[Path], typer.Option('--fpath', '-f', help='Files to shift time')
+    ],
+) -> None:
+    """Shift time in EXIF metadata.
+
+    Most useful to convert video file time to UTC. Apple's Photos app considers
+    video date time without time zone info as in UTC. This behavior is different
+    from handling picture files.
+    """
+    exif = Exiftool(verbose=cli_options.verbose)
+
+    video_fpaths = [f for f in fpaths if is_video(f)]
+    pic_fpaths = [f for f in fpaths if not is_video(f)]
+
+    if video_fpaths:
+        exif.shift_time(video_fpaths, shift, tags=EXIF_VIDEO_DATE_TAGS)
+    if pic_fpaths:
+        exif.shift_time(pic_fpaths, shift, tags=EXIF_DATE_TAGS)
+
+
+@app.command()
+def copy_time(
+    src: Annotated[Path, typer.Argument(help='Source file')],
+    dst_paths: Annotated[
+        list[Path], typer.Option('--dst', '-d', help='Destination files')
+    ],
+) -> None:
+    """Copy time tags from source to destinations.
+
+    macOS convert video service changes video create, modify date time and drops
+    some other tags. Use this to copy these tags from original video file.
+    """
+    time_tags = [
+        'TrackCreateDate',
+        'TrackModifyDate',
+        'MediaCreateDate',
+        'MediaModifyDate',
+        'ModifyDate',
+        'DateTimeOriginal',
+        'CreateDate',
+    ]
+
+    exif = Exiftool(verbose=cli_options.verbose)
+    tag_values = exif.read([src], tags=time_tags + list(EXIF_CAMERA_MODEL_TAGS.keys()))
+
+    if tag_values:
+        _canonic_camera_model_tag(src, tag_values[0])
+        exif.write(dst_paths, tag_values[0], overwrite_original=False)
+
+
+@app.command()
+def copy_gps(
+    src: Annotated[Path, typer.Argument(help='Source file with GPS')],
+    dst_paths: Annotated[
+        list[Path], typer.Option('--dst', '-d', help='Destination files')
+    ],
+    time_shift: Annotated[
+        str,
+        typer.Option(
+            '--time-shift',
+            '-t',
+            help='Time shift in hours, or "auto" to guess from filename',
+        ),
+    ] = '0',
+) -> None:
+    """Copy GPS tags from source to destinations."""
+    if time_shift == 'auto':
+        time_zone = _guess_video_file_time_zone(dst_paths[0])
+        time_shift = str(_shift_to_utc_timezone(time_zone))
+
+    verbose = cli_options.verbose
+    exif = Exiftool(verbose=verbose)
+    tags_list = exif.read([src], tags=GPS_TAGS)
+
+    if not tags_list:
+        return
+
+    tags = tags_list[0].copy()
+
+    if 'GPSCoordinates' not in tags and 'GPSPosition' in tags and 'GPSAltitude' in tags:
+        tags['GPSCoordinates'] = f'{tags["GPSPosition"]}, {tags["GPSAltitude"]}'
+        if verbose:
+            print(f'{src} has no GPSCoordinates, add it')
+
+    if 'GPSPosition' in tags:
+        del tags['GPSPosition']
+
+    time_shift_int = int(time_shift)
+    if time_shift_int != 0:
+        for f in dst_paths:
+            exif.write([f], tags, overwrite_original=False)
+            if is_video(f):
+                exif.shift_time([f], time_shift_int, tags=EXIF_VIDEO_DATE_TAGS)
+            else:
+                exif.shift_time([f], time_shift_int, tags=EXIF_DATE_TAGS)
+    else:
+        exif.write(dst_paths, tags, overwrite_original=False)
+
+    if verbose:
+        print(f'add GPS tag for video file {dst_paths}')
+
+
+@app.command(name='image')
+def image(
+    fpaths: Annotated[
+        list[Path],
+        typer.Option('--fpath', '-f', help='Files or directories to add geotag'),
+    ],
+    gpslog_paths: Annotated[
+        list[Path], typer.Option('--gpslog', '-g', help='GPS log files')
+    ],
+    pattern: Annotated[
+        str,
+        typer.Option('--pattern', '-p', help='Glob pattern for directories'),
+    ] = '*.jpg',
+    overwrite_original: Annotated[
+        bool,
+        typer.Option('--overwrite', '-o', help='Overwrite original files'),
+    ] = False,
+    force: Annotated[
+        bool,
+        typer.Option(
+            '--force', help='Update GPS tag even if files already contain GPS tags'
+        ),
+    ] = False,
+) -> None:
+    """Add geotag for image files."""
+    verbose = cli_options.verbose
+    fpaths = _expand_directories(fpaths, pattern)
+
+    if not force:
+        fpaths = _filter_files_with_tags(fpaths, GPS_TAGS, verbose)
+
+    if len(fpaths) == 0:
+        print('no files need to process')
+        return
+
+    exif = Exiftool(verbose=verbose)
+    exif.geotag(fpaths, gpslog_paths, overwrite_original=overwrite_original)
+
+
+@app.command(name='video')
+def video(
+    fpaths: Annotated[
+        list[Path],
+        typer.Option('--fpath', '-f', help='Files or directories to add geotag'),
+    ],
+    gpslog_paths: Annotated[
+        list[Path], typer.Option('--gpslog', '-g', help='GPS log files')
+    ],
+    pattern: Annotated[
+        str,
+        typer.Option('--pattern', '-p', help='Glob pattern for directories'),
+    ] = '',
+    timezone: Annotated[
+        str,
+        typer.Option(
+            '--timezone',
+            '-t',
+            help='Timezone for input video files (hour offset to UTC or "auto")',
+        ),
+    ] = 'auto',
+    force: Annotated[
+        bool,
+        typer.Option(
+            '--force', help='Update GPS tag even if files already contain GPS tags'
+        ),
+    ] = False,
+) -> None:
+    """Add geotag for video files.
+
+    exiftool can geotag all jpeg files under a single directory but not for
+    mov (QuickTime) file. For mov files, we copy an empty jpeg file and set its
+    creation time the same as the mov file. Let exiftool do geotag then copy the
+    geotag to mov file.
+    """
+    verbose = cli_options.verbose
+    fpaths = _expand_directories(fpaths, pattern if pattern else None)
+
+    if not force:
+        fpaths = _filter_files_with_tags(fpaths, GPS_TAGS, verbose)
+
+    if len(fpaths) == 0:
+        print('no files need to process')
+        return
+
+    timezone_int: int
+    if timezone == 'auto':
+        timezone_int = _guess_video_file_time_zone(fpaths[0])
+    else:
+        timezone_int = int(timezone)
+
+    time_shift = _shift_to_utc_timezone(timezone_int)
+    tag_file_time_shift = _shift_to_local_timezone(timezone_int)
+
+    print('====== generate geotag tmp jpg files for each video file ======')
+    video2tag: dict[Path, Path] = {}
+    exif = Exiftool(verbose=verbose)
+
+    for vfile in fpaths:
+        dst = vfile.with_suffix(f'{vfile.stem}_fuji_geotag_tmp.jpg')
+        video2tag[vfile] = dst
+
+        if dst.exists():
+            dst.unlink()
+
+        tags_list = exif.read([vfile], tags=['CreateDate'])
+        if tags_list and 'CreateDate' in tags_list[0]:
+            create_date = tags_list[0]['CreateDate']
+            date_tag_values = dict.fromkeys(EXIF_DATE_TAGS, create_date)
+
+            exif.write([dst], date_tag_values)
+
+            if tag_file_time_shift != 0:
+                exif.shift_time([dst], tag_file_time_shift, tags=EXIF_DATE_TAGS)
+
+            print(f'\t{dst} created')
+
+    print('====== geotag for all tmp jpg files ======')
+    image(
+        list(video2tag.values()),
+        gpslog_paths,
+        overwrite_original=True,
+        force=True,
+    )
+
+    print('====== copy GPS from tmp jpg to video ======')
+    for vfile in fpaths:
+        geotag_jpg_file = video2tag[vfile]
+        copy_gps(geotag_jpg_file, [vfile], time_shift=str(time_shift))
+        geotag_jpg_file.unlink()
+
+
+@app.command(name='camera')
+def make_model(
+    fpaths: Annotated[
+        list[Path], typer.Option('--fpath', '-f', help='Files or directories')
+    ],
+    make: Annotated[str, typer.Option('--make', '-m', help='Camera manufacturer')],
+    model: Annotated[str, typer.Option('--model', '-M', help='Camera model')],
+    force: Annotated[
+        bool,
+        typer.Option(
+            '--force',
+            '-F',
+            help='Update make and model tags even if files already contain those tags',
+        ),
+    ] = False,
+) -> None:
+    """Set camera manufacturer and model."""
+    verbose = cli_options.verbose
+    if not force:
+        fpaths = _filter_files_with_tags(fpaths, ['Make', 'Model'], verbose)
+
+    if len(fpaths) == 0:
+        print('no files need to process')
+        return
+
+    exif = Exiftool(verbose=verbose)
+    exif.write(fpaths, {'Make': make, 'Model': model}, overwrite_original=False)

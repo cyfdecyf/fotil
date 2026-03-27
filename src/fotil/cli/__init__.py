@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated
 
@@ -6,11 +7,16 @@ import typer
 from fotil import config
 
 
-state = {
-    'verbose': False,
-    '_config_path': None,
-    '_config_cache': None,
-}
+@dataclass
+class CliOptions:
+    verbose: bool = False
+    config_path: Path = field(
+        default_factory=lambda: Path('~/.config/fotil/fotil.toml').expanduser()
+    )
+    _config_cache: config.Config | None = field(default=None, repr=False)
+
+
+cli_options = CliOptions()
 
 DEFAULT_CONFIG_PATH = Path('~/.config/fotil/fotil.toml').expanduser()
 
@@ -32,12 +38,11 @@ def get_config() -> config.Config:
         FileNotFoundError: If the config file doesn't exist.
         msgspec.ValidationError: If the config file is invalid.
     """
-    if state['_config_cache'] is None:
-        conf_path = state['_config_path']
-        if not Path(conf_path).exists():
-            raise FileNotFoundError(f'Config file not found: {conf_path}')
-        state['_config_cache'] = config.load_config(conf_path)
-    return state['_config_cache']
+    if cli_options._config_cache is None:
+        if not cli_options.config_path.exists():
+            raise FileNotFoundError(f'Config file not found: {cli_options.config_path}')
+        cli_options._config_cache = config.load_config(cli_options.config_path)
+    return cli_options._config_cache
 
 
 @app.callback()
@@ -47,6 +52,6 @@ def cli_opts(
         Path, typer.Option('--config', '-c', help='Path to config file.')
     ] = DEFAULT_CONFIG_PATH,
 ):
-    state['verbose'] = verbose
-    state['_config_path'] = conf
-    state['_config_cache'] = None  # Clear cache when config path changes
+    cli_options.verbose = verbose
+    cli_options.config_path = conf
+    cli_options._config_cache = None
