@@ -306,18 +306,49 @@ def copy_gps(
         del tags['GPSPosition']
 
     time_shift_int = int(time_shift)
+
+    # For video files, GPSCoordinates must be written to the Apple ©xyz atom
+    # (UserData:GPSCoordinates) for macOS Photos compatibility. Newer exiftool
+    # (>=11.94) writes GPSCoordinates to ItemList by default. Also, the
+    # coordinate value must use ISO-6709 format (+lat+lon+alt/) since newer
+    # exiftool no longer accepts the "lat lon, alt" format correctly.
+    def _write_gps(file_paths: list[Path], tag_values: dict[str, str]) -> None:
+        video_files = [f for f in file_paths if is_video(f)]
+        pic_files = [f for f in file_paths if not is_video(f)]
+
+        if pic_files:
+            exif.write(pic_files, tag_values, overwrite_original=False)
+
+        if video_files:
+            video_tags = tag_values.copy()
+            if 'GPSCoordinates' in video_tags:
+                coords = video_tags.pop('GPSCoordinates')
+                # Reformat to ISO-6709 using GPSLatitude/GPSLongitude
+                if 'GPSLatitude' in tag_values and 'GPSLongitude' in tag_values:
+                    lat = float(tag_values['GPSLatitude'])
+                    lon = float(tag_values['GPSLongitude'])
+                    alt = (
+                        float(tag_values['GPSAltitude'])
+                        if 'GPSAltitude' in tag_values
+                        else 0
+                    )
+                    coords = f'{lat:+.4f}{lon:+.4f}{alt:+.4f}/'
+                video_tags['UserData:GPSCoordinates'] = coords
+            exif.write(video_files, video_tags, overwrite_original=False)
+
     if time_shift_int != 0:
         for f in dst_paths:
-            exif.write([f], tags, overwrite_original=False)
+            _write_gps([f], tags)
             if is_video(f):
                 exif.shift_time([f], time_shift_int, tags=EXIF_VIDEO_DATE_TAGS)
             else:
                 exif.shift_time([f], time_shift_int, tags=EXIF_DATE_TAGS)
     else:
-        exif.write(dst_paths, tags, overwrite_original=False)
+        _write_gps(dst_paths, tags)
 
     if verbose:
-        print(f'add GPS tag for video file {dst_paths}')
+        dst_fname = ', '.join([str(d) for d in dst_paths])
+        print(f'add GPS tag for video file {dst_fname}')
 
 
 @app.command(name='image')
