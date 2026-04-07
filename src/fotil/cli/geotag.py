@@ -241,9 +241,7 @@ def shift_time(
 @app.command()
 def copy_time(
     src: Annotated[Path, typer.Argument(help='Source file')],
-    dst_paths: Annotated[
-        list[Path], typer.Option('--dst', '-d', help='Destination files')
-    ],
+    dst_paths: Annotated[list[Path], typer.Argument(help='Destination files')],
 ) -> None:
     """Copy time tags from source to destinations.
 
@@ -271,9 +269,7 @@ def copy_time(
 @app.command()
 def copy_gps(
     src: Annotated[Path, typer.Argument(help='Source file with GPS')],
-    dst_paths: Annotated[
-        list[Path], typer.Option('--dst', '-d', help='Destination files')
-    ],
+    dst_paths: Annotated[list[Path], typer.Argument(help='Destination files')],
     time_shift: Annotated[
         str,
         typer.Option(
@@ -319,24 +315,18 @@ def copy_gps(
             exif.write(pic_files, tag_values, overwrite_original=False)
 
         if video_files:
-            video_tags = tag_values.copy()
-            if 'GPSCoordinates' in video_tags:
-                video_tags.pop('GPSCoordinates')
-                # Reformat to ISO-6709 using GPSLatitude/GPSLongitude
-                if 'GPSLatitude' in tag_values and 'GPSLongitude' in tag_values:
-                    lat = float(tag_values['GPSLatitude'])
-                    lon = float(tag_values['GPSLongitude'])
-                    alt = (
-                        float(tag_values['GPSAltitude'])
-                        if 'GPSAltitude' in tag_values
-                        else 0
-                    )
-                    coords = f'{lat:+.4f}{lon:+.4f}{alt:+08.3f}/'
-                    video_tags['Keys:GPSCoordinates'] = coords
-                    if 'LocationAccuracyHorizontal' in tag_values:
-                        video_tags['Keys:LocationAccuracyHorizontal'] = tag_values[
-                            'LocationAccuracyHorizontal'
-                        ]
+            video_tags: dict[str, str] = {}
+            if 'GPSLatitude' in tag_values and 'GPSLongitude' in tag_values:
+                lat = float(tag_values['GPSLatitude'])
+                lon = float(tag_values['GPSLongitude'])
+                alt = (
+                    float(tag_values['GPSAltitude']) if 'GPSAltitude' in tag_values else 0
+                )
+                video_tags['Keys:GPSCoordinates'] = f'{lat:+.4f}{lon:+.4f}{alt:+08.3f}/'
+                if 'LocationAccuracyHorizontal' in tag_values:
+                    video_tags['Keys:LocationAccuracyHorizontal'] = tag_values[
+                        'LocationAccuracyHorizontal'
+                    ]
             exif.write(video_files, video_tags, overwrite_original=False)
 
     if time_shift_int != 0:
