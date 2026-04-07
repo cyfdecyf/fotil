@@ -37,6 +37,7 @@ GPS_TAGS = [
     'GPSLongitude',
     'GPSPosition',
     'GPSCoordinates',
+    'LocationAccuracyHorizontal',
 ]
 
 
