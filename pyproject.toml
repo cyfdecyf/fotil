@@ -32,3 +32,13 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 artifacts = ["src/fotil/static/*.jpg"]
 
+[tool.uv]
+link-mode = "hardlink"
+index-strategy = "unsafe-best-match"
+# Too many concurrent downloads may lead to timeout with low bandwidth.
+concurrent-downloads = 4
+
+[tool.uv.pip]
+link-mode = "hardlink"
+index-strategy = "unsafe-best-match"
+
