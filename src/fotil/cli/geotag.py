@@ -256,14 +256,44 @@ def copy_time(
         'ModifyDate',
         'DateTimeOriginal',
         'CreateDate',
+        'CreationDate',
+        'EncodingTime',
     ]
+
+    # Tags that live in the QuickTime Keys directory. Writing them without a
+    # group prefix is ambiguous in exiftool (same-named XMP tag wins), so they
+    # must be written with the explicit "Keys:" prefix for video files.
+    video_keys_tags = {'CreationDate'}
 
     exif = Exiftool(verbose=cli_options.verbose)
     tag_values = exif.read([src], tags=time_tags + list(EXIF_CAMERA_MODEL_TAGS.keys()))
 
-    if tag_values:
-        _canonic_camera_model_tag(src, tag_values[0])
-        exif.write(dst_paths, tag_values[0], overwrite_original=False)
+    if not tag_values:
+        return
+
+    _canonic_camera_model_tag(src, tag_values[0])
+    src_tags = tag_values[0]
+
+    def _write_time(file_paths: list[Path], tag_values: dict[str, str]) -> None:
+        video_files = [f for f in file_paths if is_video(f)]
+        pic_files = [f for f in file_paths if not is_video(f)]
+
+        if pic_files:
+            pic_tags = {
+                k: v for k, v in tag_values.items() if k not in video_keys_tags
+            }
+            exif.write(pic_files, pic_tags, overwrite_original=False)
+
+        if video_files:
+            video_tags: dict[str, str] = {}
+            for tag, value in tag_values.items():
+                if tag in video_keys_tags:
+                    video_tags[f'Keys:{tag}'] = value
+                else:
+                    video_tags[tag] = value
+            exif.write(video_files, video_tags, overwrite_original=False)
+
+    _write_time(dst_paths, src_tags)
 
 
 @app.command()
