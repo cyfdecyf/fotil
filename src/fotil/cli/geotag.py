@@ -11,6 +11,7 @@ import typer
 
 from fotil.exiftool import (
     EXIF_DATE_TAGS,
+    EXIF_VIDEO_ALL_DATE_TAGS,
     EXIF_VIDEO_DATE_TAGS,
     GPS_TAGS,
     Exiftool,
@@ -194,9 +195,34 @@ def is_video(fname: Path) -> bool:
         fname: Path to the file.
 
     Returns:
-        True if file is a video.
+        True if the file is a video.
     """
     return fname.suffix.lower() in ('.mov', '.mp4')
+
+
+def _shift_all_time_tags(exif: Exiftool, fpaths: list[Path], shift: int) -> None:
+    """Shift all supported time tags, splitting video and picture files.
+
+    For files whose recording device time was wrong. exiftool shift moves the
+    wall time only, so a value with a timezone suffix keeps its suffix -- such a
+    value from a correctly-clocked device already holds the right absolute time
+    and must not be shifted.
+
+    For videos this includes Keys:CreationDate and EncodingTime, the tags macOS
+    Photos reads.
+
+    Args:
+        exif: Exiftool instance.
+        fpaths: List of file paths.
+        shift: Time shift in hours (can be negative).
+    """
+    video_fpaths = [f for f in fpaths if is_video(f)]
+    pic_fpaths = [f for f in fpaths if not is_video(f)]
+
+    if video_fpaths:
+        exif.shift_time(video_fpaths, shift, tags=EXIF_VIDEO_ALL_DATE_TAGS)
+    if pic_fpaths:
+        exif.shift_time(pic_fpaths, shift, tags=EXIF_DATE_TAGS)
 
 
 def _get_tag_file() -> Path:
@@ -216,37 +242,59 @@ app = typer.Typer(help='Geotagging operations.')
 
 @app.command(name='shift')
 def shift_time(
-    shift: Annotated[int, typer.Argument(help='Time shift in hours')],
-    fpaths: Annotated[
-        list[Path], typer.Option('--fpath', '-f', help='Files to shift time')
+    fpaths: Annotated[list[Path], typer.Argument(help='Files to shift time')],
+    time_shift: Annotated[
+        int,
+        typer.Option(
+            '--time-shift',
+            '-s',
+            help='Shift time tags by N hours (negative to shift back)',
+        ),
     ],
 ) -> None:
     """Shift time in EXIF metadata.
 
+    This is designed for files whose recording device time was wrong: a wrong
+    camera clock, or a camera left in the home timezone while shooting abroad
+    (e.g. recording Shanghai wall time for videos shot in Japan), so the
+    recorded absolute time itself is incorrect. Do NOT use it on files from
+    devices with correct time and timezone (e.g. iPhone videos): their
+    timezone-suffixed values already hold the right absolute time and shifting
+    would corrupt it. Fixing a timezone label on a correct time means
+    rewriting the value, not shifting it.
+
     Most useful to convert video file time to UTC. Apple's Photos app considers
     video date time without time zone info as in UTC. This behavior is different
     from handling picture files.
+
+    For video files all time tags are shifted, including Keys:CreationDate and
+    EncodingTime which macOS Photos reads. A value with a timezone suffix keeps
+    its suffix while the wall time is shifted.
     """
     exif = Exiftool(verbose=cli_options.verbose)
-
-    video_fpaths = [f for f in fpaths if is_video(f)]
-    pic_fpaths = [f for f in fpaths if not is_video(f)]
-
-    if video_fpaths:
-        exif.shift_time(video_fpaths, shift, tags=EXIF_VIDEO_DATE_TAGS)
-    if pic_fpaths:
-        exif.shift_time(pic_fpaths, shift, tags=EXIF_DATE_TAGS)
+    _shift_all_time_tags(exif, fpaths, time_shift)
 
 
 @app.command()
 def copy_time(
     src: Annotated[Path, typer.Argument(help='Source file')],
     dst_paths: Annotated[list[Path], typer.Argument(help='Destination files')],
+    time_shift: Annotated[
+        int,
+        typer.Option(
+            '--time-shift',
+            '-s',
+            help='Shift copied time tags by N hours (e.g. 1 for videos shot in '
+            'Japan with camera clock left in Shanghai time)',
+        ),
+    ] = 0,
 ) -> None:
     """Copy time tags from source to destinations.
 
     macOS convert video service changes video create, modify date time and drops
-    some other tags. Use this to copy these tags from original video file.
+    some other tags. Use this to copy these tags from original video file. With
+    --time-shift, also fix videos shot in another timezone while the camera
+    clock stayed in the home timezone.
     """
     time_tags = [
         'TrackCreateDate',
@@ -279,9 +327,7 @@ def copy_time(
         pic_files = [f for f in file_paths if not is_video(f)]
 
         if pic_files:
-            pic_tags = {
-                k: v for k, v in tag_values.items() if k not in video_keys_tags
-            }
+            pic_tags = {k: v for k, v in tag_values.items() if k not in video_keys_tags}
             exif.write(pic_files, pic_tags, overwrite_original=False)
 
         if video_files:
@@ -294,6 +340,9 @@ def copy_time(
             exif.write(video_files, video_tags, overwrite_original=False)
 
     _write_time(dst_paths, src_tags)
+
+    if time_shift != 0:
+        _shift_all_time_tags(exif, dst_paths, time_shift)
 
 
 @app.command()

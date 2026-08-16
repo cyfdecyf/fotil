@@ -19,6 +19,20 @@ EXIF_VIDEO_DATE_TAGS = [
     'TrackModifyDate',
 ]
 
+# All time tags a video file may carry, including the QuickTime Keys ones that
+# macOS Photos reads. Used for plain time-offset shifts (geotag shift/copy-time),
+# which are meant for files whose recording device time was wrong -- not for
+# fixing the timezone label of an already correct time. Not for the to-UTC
+# conversion in copy_gps/video: shifting a Keys:CreationDate with a timezone
+# suffix moves the wall time but keeps the suffix, which would produce a wrong
+# absolute time. CreationDate must keep the "Keys:" prefix -- unprefixed it is
+# ambiguous in exiftool (same-named XMP tag wins).
+EXIF_VIDEO_ALL_DATE_TAGS = [
+    *EXIF_VIDEO_DATE_TAGS,
+    'Keys:CreationDate',
+    'EncodingTime',
+]
+
 EXIF_CREATE_DATE_TAGS = [
     'CreateDate',
     'DateTimeOriginal',
