@@ -1,0 +1,290 @@
+ExifToolVersion                 : 13.55
+FileName                        : iPhone16-kansai-airport.heic
+Directory                       : .
+FileSize                        : 1521 kB
+FileModifyDate                  : 2026:09:02 21:41:01+08:00
+FileAccessDate                  : 2026:09:03 21:36:27+08:00
+FileInodeChangeDate             : 2026:09:02 22:20:20+08:00
+FilePermissions                 : -rw-------
+FileType                        : HEIC
+FileTypeExtension               : heic
+MIMEType                        : image/heic
+MajorBrand                      : High Efficiency Image Format HEVC still image (.HEIC)
+MinorVersion                    : 0.0.0
+CompatibleBrands                : mif1, MiHB, MiHA, heix, MiHE, MiPr, heic, miaf, tmap
+HandlerType                     : Picture
+PrimaryItemReference            : 49
+MetaImageSize                   : 4032x3024 0 515 2016 1512 0 1029 2880 2160 0 0 64 0 0 15 16960 29 823 15 16960 65532 32896 15 16960 29 823 15 16960 12 57318 15 16960 0 10 15 16960 0 10 15 16960
+XMPToolkit                      : XMP Core 6.0.0
+SemanticSegmentationMatteVersion: 65536
+AuxiliaryImageSubType           : portraiteffectsmatte
+NativeFormat                    : L008
+StoredFormat                    : L008
+PortraitEffectsMatteVersion     : 65537
+HDRGainMapVersion               : 0.2.0.0
+HDRGainMapHeadroom              : 3.735670
+Tag2                            : False
+TagH                            : 2.32774829864502
+Tag3                            : (Binary data 516 bytes, use -b option to extract)
+IOriginalRangeMin               : -0.0243072509765625
+IOriginalRangeMax               : 0.88134765625
+IGain                           : 9.31099319458008
+Tag4                            : 13.7846155166626
+TagJ                            : 1
+TagC                            : (Binary data 2048 bytes, use -b option to extract)
+Tag5                            : 0
+TagD                            : (Binary data 2048 bytes, use -b option to extract)
+Tag6ToneMappedImageRedChannelSkinBasedP98: 0.112614892423153
+Tag6ToneMappedImageRedChannelSkinBasedP10: 0.0606387853622437
+Tag6ToneMappedImageRedChannelSkinBasedP75: 0.095289520919323
+Tag6ToneMappedImageRedChannelSkinBasedWhitePoint: 0.129940256476402
+Tag6ToneMappedImageRedChannelSkinBasedP25: 0.0736328139901161
+Tag6ToneMappedImageRedChannelSkinBasedP02: 0.0476447604596615
+Tag6ToneMappedImageRedChannelSkinBasedHighKey: 0.999984681606293
+Tag6ToneMappedImageRedChannelSkinBasedBlackPoint: 0.0347521863877773
+Tag6ToneMappedImageRedChannelSkinBasedP50: 0.0909581780433655
+Tag6ToneMappedImageGreenChannelSkinBasedP98: 0.0476447604596615
+Tag6ToneMappedImageGreenChannelSkinBasedP10: 0.0259880516678095
+Tag6ToneMappedImageGreenChannelSkinBasedP75: 0.0389820784330368
+Tag6ToneMappedImageGreenChannelSkinBasedWhitePoint: 0.051976103335619
+Tag6ToneMappedImageGreenChannelSkinBasedP25: 0.0346507355570793
+Tag6ToneMappedImageGreenChannelSkinBasedP02: 0.0216567106544971
+Tag6ToneMappedImageGreenChannelSkinBasedHighKey: 0.999993979930878
+Tag6ToneMappedImageGreenChannelSkinBasedBlackPoint: 0.0166473593562841
+Tag6ToneMappedImageGreenChannelSkinBasedP50: 0.0389820784330368
+Tag6ToneMappedImageP98          : 0.84028035402298
+Tag6ToneMappedImageP10          : 0.0129940258339047
+Tag6ToneMappedImageP75          : 0.285868555307388
+Tag6ToneMappedImageWhitePoint   : 0.970220565795898
+Tag6ToneMappedImageP25          : 0.0563074462115765
+Tag6ToneMappedImageP02          : 0.00433134194463491
+Tag6ToneMappedImageHighKey      : 0.76899653673172
+Tag6ToneMappedImageBlackPoint   : 0
+Tag6ToneMappedImageP50          : 0.095289520919323
+Tag6ToneMappedImagePersonSegmentBasedP98: 0.342176020145416
+Tag6ToneMappedImagePersonSegmentBasedP10: 0.0129940258339047
+Tag6ToneMappedImagePersonSegmentBasedP75: 0.181916356086731
+Tag6ToneMappedImagePersonSegmentBasedWhitePoint: 0.493772983551025
+Tag6ToneMappedImagePersonSegmentBasedP25: 0.0216567106544971
+Tag6ToneMappedImagePersonSegmentBasedP02: 0.00866268388926983
+Tag6ToneMappedImagePersonSegmentBasedHighKey: 0.880193948745728
+Tag6ToneMappedImagePersonSegmentBasedBlackPoint: 0.00352414604276419
+Tag6ToneMappedImagePersonSegmentBasedP50: 0.108283549547195
+Tag6LinearImageSkinBasedP98     : 0.00819240510463715
+Tag6LinearImageSkinBasedP10     : 0.00819240510463715
+Tag6LinearImageSkinBasedP75     : 0.00819240510463715
+Tag6LinearImageSkinBasedWhitePoint: 0.00819240510463715
+Tag6LinearImageSkinBasedP25     : 0.00819240510463715
+Tag6LinearImageSkinBasedP02     : 0.00819240510463715
+Tag6LinearImageSkinBasedHighKey : 1.00000011920929
+Tag6LinearImageSkinBasedBlackPoint: 0
+Tag6LinearImageSkinBasedP50     : 0.00819240510463715
+Tag6LinearImageP98              : 0.524313926696777
+Tag6LinearImageP10              : 0.00819240510463715
+Tag6LinearImageP75              : 0.0163848102092743
+Tag6LinearImageWhitePoint       : 1.76955950260162
+Tag6LinearImageP25              : 0.00819240510463715
+Tag6LinearImageP02              : 0.00819240510463715
+Tag6LinearImageHighKey          : 0.906261384487152
+Tag6LinearImageBlackPoint       : 0
+Tag6LinearImageP50              : 0.00819240510463715
+Tag6LinearImagePersonSegmentBasedP98: 0.0163848102092743
+Tag6LinearImagePersonSegmentBasedP10: 0.00819240510463715
+Tag6LinearImagePersonSegmentBasedP75: 0.00819240510463715
+Tag6LinearImagePersonSegmentBasedWhitePoint: 0.0245772153139114
+Tag6LinearImagePersonSegmentBasedP25: 0.00819240510463715
+Tag6LinearImagePersonSegmentBasedP02: 0.00819240510463715
+Tag6LinearImagePersonSegmentBasedHighKey: 1.00040709972382
+Tag6LinearImagePersonSegmentBasedBlackPoint: 0
+Tag6LinearImagePersonSegmentBasedP50: 0.00819240510463715
+Tag6ToneMappedImageBlueChannelSkinBasedP98: 0.0389820784330368
+Tag6ToneMappedImageBlueChannelSkinBasedP10: 0.0216567106544971
+Tag6ToneMappedImageBlueChannelSkinBasedP75: 0.0303193926811218
+Tag6ToneMappedImageBlueChannelSkinBasedWhitePoint: 0.0476447604596615
+Tag6ToneMappedImageBlueChannelSkinBasedP25: 0.0259880516678095
+Tag6ToneMappedImageBlueChannelSkinBasedP02: 0.0173253677785397
+Tag6ToneMappedImageBlueChannelSkinBasedHighKey: 0.999995410442352
+Tag6ToneMappedImageBlueChannelSkinBasedBlackPoint: 0.0134666059166193
+Tag6ToneMappedImageBlueChannelSkinBasedP50: 0.0303193926811218
+Tag6LinearGTCImageP98           : 0
+Tag6LinearGTCImageP10           : 0
+Tag6LinearGTCImageP75           : 0
+Tag6LinearGTCImageWhitePoint    : 0
+Tag6LinearGTCImageP25           : 0
+Tag6LinearGTCImageP02           : 0
+Tag6LinearGTCImageHighKey       : 0
+Tag6LinearGTCImageBlackPoint    : 0
+Tag6LinearGTCImageP50           : 0
+Tag6ToneMappedImageSkinBasedP98 : 0.0693014711141586
+Tag6ToneMappedImageSkinBasedP10 : 0.0389820784330368
+Tag6ToneMappedImageSkinBasedP75 : 0.0563074462115765
+Tag6ToneMappedImageSkinBasedWhitePoint: 0.0779641568660736
+Tag6ToneMappedImageSkinBasedP25 : 0.0476447604596615
+Tag6ToneMappedImageSkinBasedP02 : 0.0303193926811218
+Tag6ToneMappedImageSkinBasedHighKey: 0.999990999698639
+Tag6ToneMappedImageSkinBasedBlackPoint: 0.0228546410799026
+Tag6ToneMappedImageSkinBasedP50 : 0.0563074462115765
+TagE                            : 32
+Tag7PeopleRatio                 : 0.00640487670898438
+Tag7PersonMasksValidHint        : 1
+Tag7SkinRatio                   : 0.00018056234694086
+Tag0                            : 14
+TagF                            : 32
+Tag1                            : (Binary data 51840 bytes, use -b option to extract)
+TagG                            : 1278226536
+ExifByteOrder                   : Big-endian (Motorola, MM)
+Make                            : Apple
+Model                           : iPhone 16
+Orientation                     : Horizontal (normal)
+XResolution                     : 72
+YResolution                     : 72
+ResolutionUnit                  : inches
+Software                        : 18.6.1
+ModifyDate                      : 2025:08:30 16:03:06
+HostComputer                    : iPhone 16
+ExposureTime                    : 1/189
+FNumber                         : 1.6
+ExposureProgram                 : Program AE
+ISO                             : 80
+ExifVersion                     : 0232
+DateTimeOriginal                : 2025:08:30 16:03:06
+CreateDate                      : 2025:08:30 16:03:06
+OffsetTime                      : +09:00
+OffsetTimeOriginal              : +09:00
+OffsetTimeDigitized             : +09:00
+ShutterSpeedValue               : 1/189
+ApertureValue                   : 1.6
+BrightnessValue                 : 4.594463107
+ExposureCompensation            : 0
+MeteringMode                    : Multi-segment
+Flash                           : Off, Did not fire
+FocalLength                     : 6.0 mm
+SubjectArea                     : 2015 1507 1106 662
+MakerNoteVersion                : 15
+RunTimeFlags                    : Valid
+RunTimeValue                    : 736138164290916
+RunTimeScale                    : 1000000000
+RunTimeEpoch                    : 0
+AEStable                        : Yes
+AETarget                        : 175
+AEAverage                       : 169
+AFStable                        : Yes
+AccelerationVector              : -0.9856209765 0.0002037720987 0.1540878266
+FocusDistanceRange              : 0.95 - 2.81 m
+ImageCaptureType                : Scene
+LivePhotoVideoIndex             : 5251124
+PhotosAppFeatureFlags           : 0
+HDRHeadroom                     : 1.00999999
+AFPerformance                   : 121 1 22
+SignalToNoiseRatio              : 40.52700422
+PhotoIdentifier                 : 9FE8BB8D-7193-4B4D-8A7C-388CA8E23247
+ColorTemperature                : 6127
+CameraType                      : Back Normal
+FocusPosition                   : 65
+HDRGain                         : 1.325488328
+SubSecTimeOriginal              : 701
+SubSecTimeDigitized             : 701
+ColorSpace                      : Uncalibrated
+ExifImageWidth                  : 4032
+ExifImageHeight                 : 3024
+SensingMethod                   : One-chip color area
+SceneType                       : Directly photographed
+ExposureMode                    : Auto
+WhiteBalance                    : Auto
+FocalLengthIn35mmFormat         : 52 mm
+LensInfo                        : 2.220000029-5.960000038mm f/1.6-2.2
+LensMake                        : Apple
+LensModel                       : iPhone 16 back dual wide camera 5.96mm f/1.6
+CompositeImage                  : General Composite Image
+GPSLatitudeRef                  : North
+GPSLongitudeRef                 : East
+GPSAltitudeRef                  : Above Sea Level
+GPSTimeStamp                    : 07:03:03.21
+GPSSpeedRef                     : km/h
+GPSSpeed                        : 0
+GPSImgDirectionRef              : True North
+GPSImgDirection                 : 237.5211488
+GPSDestBearingRef               : True North
+GPSDestBearing                  : 237.5211488
+GPSDateStamp                    : 2025:08:30
+GPSHPositioningError            : 41.82802641 m
+ProfileCMMType                  : Apple Computer Inc.
+ProfileVersion                  : 4.0.0
+ProfileClass                    : Display Device Profile
+ColorSpaceData                  : RGB
+ProfileConnectionSpace          : XYZ
+ProfileDateTime                 : 2022:01:01 00:00:00
+ProfileFileSignature            : acsp
+PrimaryPlatform                 : Apple Computer Inc.
+CMMFlags                        : Not Embedded, Independent
+DeviceManufacturer              : Apple Computer Inc.
+DeviceModel                     : 
+DeviceAttributes                : Reflective, Glossy, Positive, Color
+RenderingIntent                 : Perceptual
+ConnectionSpaceIlluminant       : 0.9642 1 0.82491
+ProfileCreator                  : Apple Computer Inc.
+ProfileID                       : ecfda38e388547c36db4bd4f7ada182f
+ProfileDescription              : Display P3
+ProfileCopyright                : Copyright Apple Inc., 2022
+MediaWhitePoint                 : 0.96419 1 0.82489
+RedMatrixColumn                 : 0.51512 0.2412 -0.00105
+GreenMatrixColumn               : 0.29198 0.69225 0.04189
+BlueMatrixColumn                : 0.1571 0.06657 0.78407
+RedTRC                          : (Binary data 32 bytes, use -b option to extract)
+ChromaticAdaptation             : 1.04788 0.02292 -0.0502 0.02959 0.99048 -0.01706 -0.00923 0.01508 0.75168
+BlueTRC                         : (Binary data 32 bytes, use -b option to extract)
+GreenTRC                        : (Binary data 32 bytes, use -b option to extract)
+ImageWidth                      : 4032
+ImageHeight                     : 3024
+ImageSpatialExtent              : 4032x3024
+Rotation                        : Horizontal (normal)
+ImagePixelDepth                 : 8 8 8
+GrayTRC                         : (Binary data 14 bytes, use -b option to extract)
+AuxiliaryImageType              : urn:com:apple:photo:2018:aux:portraiteffectsmatte
+ColorPrimaries                  : SMPTE EG 432-1
+TransferCharacteristics         : Linear
+MatrixCoefficients              : Identity matrix
+VideoFullRangeFlag              : Full
+AToB0                           : (Binary data 19478 bytes, use -b option to extract)
+BToA0                           : (Binary data 6412 bytes, use -b option to extract)
+HDGainMapInfo                   : (Binary data 254 bytes, use -b option to extract)
+Luminance                       : 0 100 0
+ColorProfiles                   : nclx
+HEVCConfigurationVersion        : 1
+GeneralProfileSpace             : Conforming
+GeneralTierFlag                 : Main Tier
+GeneralProfileIDC               : Main Still Picture
+GenProfileCompatibilityFlags    : Main Still Picture, Main 10, Main
+ConstraintIndicatorFlags        : 176 0 0 0 0 0
+GeneralLevelIDC                 : 90 (level 3.0)
+MinSpatialSegmentationIDC       : 0
+ParallelismType                 : 0
+ChromaFormat                    : 4:2:0
+BitDepthLuma                    : 8
+BitDepthChroma                  : 8
+AverageFrameRate                : 0
+ConstantFrameRate               : Unknown
+NumTemporalLayers               : 1
+TemporalIDNested                : No
+MediaDataSize                   : 1486385
+MediaDataOffset                 : 34834
+RunTimeSincePowerUp             : 8 days 12:28:58
+Aperture                        : 1.6
+ImageSize                       : 4032x3024
+Megapixels                      : 12.2
+ScaleFactor35efl                : 8.7
+ShutterSpeed                    : 1/189
+SubSecCreateDate                : 2025:08:30 16:03:06.701+09:00
+SubSecDateTimeOriginal          : 2025:08:30 16:03:06.701+09:00
+SubSecModifyDate                : 2025:08:30 16:03:06+09:00
+GPSAltitude                     : 3.9 m Above Sea Level
+GPSDateTime                     : 2025:08:30 07:03:03.21Z
+GPSLatitude                     : 34 deg 25' 47.55" N
+GPSLongitude                    : 135 deg 14' 17.81" E
+CircleOfConfusion               : 0.003 mm
+FOV                             : 38.2 deg
+FocalLength35efl                : 6.0 mm (35 mm equivalent: 52.0 mm)
+GPSPosition                     : 34 deg 25' 47.55" N, 135 deg 14' 17.81" E
+HyperfocalDistance              : 6.45 m
+LightValue                      : 9.2
+LensID                          : iPhone 16 back dual wide camera 5.96mm f/1.6
