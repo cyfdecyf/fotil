@@ -3,6 +3,7 @@
 import importlib.resources as resources
 import re
 import shutil
+import xml.etree.ElementTree as ET
 
 from datetime import datetime as dt
 from datetime import timedelta
@@ -207,6 +208,138 @@ def _write_video_creation_date(exif: Exiftool, fpath: Path, tz_hour: int) -> Non
     exif.write([fpath], {'Keys:CreationDate': value})
 
 
+def _parse_dms(value: str, ref: str) -> float:
+    """Convert EXIF-style DMS "34;42;19.831" with an N/S/E/W ref to signed degrees."""
+    degrees, minutes, seconds = (float(part) for part in value.split(';'))
+    decimal = degrees + minutes / 60 + seconds / 3600
+    return -decimal if ref.strip().upper() in ('S', 'W') else decimal
+
+
+def _iso_to_exif_datetime(value: str) -> str | None:
+    """Convert ISO 8601 "2025-08-29T21:45:10+09:00" to EXIF "2025:08:29 21:45:10+09:00"."""
+    try:
+        parsed = dt.fromisoformat(value)
+    except ValueError:
+        return None
+    offset = parsed.strftime('%z')
+    tz = f'{offset[:3]}:{offset[3:]}' if offset else ''
+    return f'{parsed:%Y:%m:%d %H:%M:%S}{tz}'
+
+
+def _read_sony_sidecar(video: Path) -> dict[str, str] | None:
+    """Read GPS coordinates and creation date from a Sony NonRealTimeMeta sidecar.
+
+    Sony XAVC S clips ship a same-basename .XML sidecar; the full GPS fix
+    lives there while the MP4 itself exposes almost nothing to exiftool.
+
+    Args:
+        video: Path to the video file whose sidecar to read.
+
+    Returns:
+        Tag values: GPSLatitude/GPSLongitude as signed decimals (like exiftool
+        -n output) and CreationDate with timezone. None when the sidecar is
+        missing or malformed, or carries no GPS fix.
+    """
+    sidecar = next(
+        (
+            p
+            for p in (video.with_suffix('.XML'), video.with_suffix('.xml'))
+            if p.is_file()
+        ),
+        None,
+    )
+    if sidecar is None:
+        return None
+
+    try:
+        root = ET.parse(sidecar).getroot()
+    except ET.ParseError:
+        print(f'ignore malformed sidecar {sidecar}')
+        return None
+
+    gps_items: dict[str, str] = {}
+    for group in root.findall('{*}AcquisitionRecord/{*}Group'):
+        if group.get('name') == 'ExifGPS':
+            gps_items = {
+                i.get('name'): i.get('value') or '' for i in group.findall('{*}Item')
+            }
+            break
+
+    if 'Latitude' not in gps_items or 'Longitude' not in gps_items:
+        if cli_options.verbose:
+            print(f'{sidecar} has no GPS fix, ignore it')
+        return None
+
+    tags = {
+        'GPSLatitude': str(
+            _parse_dms(gps_items['Latitude'], gps_items.get('LatitudeRef', 'N'))
+        ),
+        'GPSLongitude': str(
+            _parse_dms(gps_items['Longitude'], gps_items.get('LongitudeRef', 'E'))
+        ),
+    }
+
+    creation = root.find('{*}CreationDate')
+    if creation is not None:
+        exif_datetime = _iso_to_exif_datetime(creation.get('value', ''))
+        if exif_datetime:
+            tags['CreationDate'] = exif_datetime
+
+    return tags
+
+
+def _write_gps(
+    exif: Exiftool, file_paths: list[Path], tag_values: dict[str, str]
+) -> None:
+    """Write GPS tags, splitting video and picture files.
+
+    For video files, write Keys:GPSCoordinates to create proper mdta key
+    registration (com.apple.quicktime.location.ISO6709), matching the format
+    iOS uses. Also reformat coordinates to ISO-6709 since newer exiftool no
+    longer accepts the "lat lon, alt" format correctly.
+
+    Args:
+        exif: Exiftool instance.
+        file_paths: Destination file paths.
+        tag_values: GPS tag values, GPSLatitude/GPSLongitude as signed
+            decimals (like exiftool -n output).
+    """
+    video_files = [f for f in file_paths if is_video(f)]
+    pic_files = [f for f in file_paths if not is_video(f)]
+
+    if pic_files:
+        pic_tags = dict(tag_values)
+        # exiftool drops the sign of GPSLatitude/GPSLongitude unless the Ref
+        # tags are set alongside, so derive them from the signed values.
+        if 'GPSLatitude' in pic_tags and 'GPSLatitudeRef' not in pic_tags:
+            pic_tags['GPSLatitudeRef'] = (
+                'S' if float(pic_tags['GPSLatitude']) < 0 else 'N'
+            )
+        if 'GPSLongitude' in pic_tags and 'GPSLongitudeRef' not in pic_tags:
+            pic_tags['GPSLongitudeRef'] = (
+                'W' if float(pic_tags['GPSLongitude']) < 0 else 'E'
+            )
+        exif.write(pic_files, pic_tags, overwrite_original=False)
+
+    if video_files:
+        video_tags: dict[str, str] = {}
+        if 'GPSLatitude' in tag_values and 'GPSLongitude' in tag_values:
+            lat = float(tag_values['GPSLatitude'])
+            lon = float(tag_values['GPSLongitude'])
+            # ISO-6709 allows omitting the altitude; don't fabricate a
+            # "+000.000" sea-level value when the source has none. Pad the
+            # integer digits (2 for latitude, 3 for longitude).
+            iso6709 = f'{lat:+08.4f}{lon:+09.4f}'
+            if 'GPSAltitude' in tag_values:
+                iso6709 += f'{float(tag_values["GPSAltitude"]):+08.3f}'
+            video_tags['Keys:GPSCoordinates'] = f'{iso6709}/'
+            if 'LocationAccuracyHorizontal' in tag_values:
+                video_tags['Keys:LocationAccuracyHorizontal'] = tag_values[
+                    'LocationAccuracyHorizontal'
+                ]
+        exif.write(video_files, video_tags, overwrite_original=False)
+
+
 def _filter_files_with_tags(
     fpaths: list[Path], tags: list[str], verbose: bool = False
 ) -> list[Path]:
@@ -370,6 +503,11 @@ def copy_time(
     some other tags. Use this to copy these tags from original video file. With
     --time-shift, also fix videos shot in another timezone while the camera
     clock stayed in the home timezone.
+
+    When the source is a video with a same-basename .XML sidecar carrying a
+    GPS fix (Sony NonRealTimeMeta), the GPS coordinates and the sidecar's
+    timezone-aware creation date are copied too, saving a separate copy-gps
+    step.
     """
     time_tags = [
         'TrackCreateDate',
@@ -418,6 +556,12 @@ def copy_time(
     _canonic_camera_model_tag(src, tag_values[0])
     src_tags = tag_values[0]
 
+    sidecar_tags = _read_sony_sidecar(src) if is_video(src) else None
+    if sidecar_tags:
+        if 'CreationDate' in sidecar_tags and 'CreationDate' not in src_tags:
+            src_tags['CreationDate'] = sidecar_tags['CreationDate']
+        print(f'{src.name}: sidecar has GPS, copy GPS and creation date too')
+
     def _write_time(file_paths: list[Path], tag_values: dict[str, str]) -> None:
         video_files = [f for f in file_paths if is_video(f)]
         pic_files = [f for f in file_paths if not is_video(f)]
@@ -438,6 +582,13 @@ def copy_time(
             exif.write(video_files, video_tags, overwrite_original=False)
 
     _write_time(dst_paths, src_tags)
+
+    if sidecar_tags:
+        _write_gps(
+            exif,
+            dst_paths,
+            {k: v for k, v in sidecar_tags.items() if k.startswith('GPS')},
+        )
 
     if time_shift != 0:
         _shift_all_time_tags(exif, dst_paths, time_shift)
@@ -480,44 +631,15 @@ def copy_gps(
 
     time_shift_int = int(time_shift)
 
-    # For video files, write GPS using Keys:GPSCoordinates to create proper mdta
-    # key registration (com.apple.quicktime.location.ISO6709), matching the
-    # format iOS uses. Also reformat coordinates to ISO-6709 since newer exiftool
-    # no longer accepts the "lat lon, alt" format correctly.
-    def _write_gps(file_paths: list[Path], tag_values: dict[str, str]) -> None:
-        video_files = [f for f in file_paths if is_video(f)]
-        pic_files = [f for f in file_paths if not is_video(f)]
-
-        if pic_files:
-            exif.write(pic_files, tag_values, overwrite_original=False)
-
-        if video_files:
-            video_tags: dict[str, str] = {}
-            if 'GPSLatitude' in tag_values and 'GPSLongitude' in tag_values:
-                lat = float(tag_values['GPSLatitude'])
-                lon = float(tag_values['GPSLongitude'])
-                # ISO-6709 allows omitting the altitude; don't fabricate a
-                # "+000.000" sea-level value when the source has none. Pad the
-                # integer digits (2 for latitude, 3 for longitude).
-                iso6709 = f'{lat:+08.4f}{lon:+09.4f}'
-                if 'GPSAltitude' in tag_values:
-                    iso6709 += f'{float(tag_values["GPSAltitude"]):+08.3f}'
-                video_tags['Keys:GPSCoordinates'] = f'{iso6709}/'
-                if 'LocationAccuracyHorizontal' in tag_values:
-                    video_tags['Keys:LocationAccuracyHorizontal'] = tag_values[
-                        'LocationAccuracyHorizontal'
-                    ]
-            exif.write(video_files, video_tags, overwrite_original=False)
-
     if time_shift_int != 0:
         for f in dst_paths:
-            _write_gps([f], tags)
+            _write_gps(exif, [f], tags)
             if is_video(f):
                 exif.shift_time([f], time_shift_int, tags=EXIF_VIDEO_DATE_TAGS)
             else:
                 exif.shift_time([f], time_shift_int, tags=EXIF_DATE_TAGS)
     else:
-        _write_gps(dst_paths, tags)
+        _write_gps(exif, dst_paths, tags)
 
     if verbose:
         dst_fname = ', '.join([str(d) for d in dst_paths])
