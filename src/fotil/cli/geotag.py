@@ -381,6 +381,15 @@ def copy_time(
         'CreateDate',
         'CreationDate',
         'EncodingTime',
+        # Timezone offsets and sub-seconds, photo only: Photos.app uses the
+        # OffsetTime tags to show a photo's capture timezone, and iPhone/Sony
+        # photos pair them with the sub-second tags.
+        'OffsetTime',
+        'OffsetTimeOriginal',
+        'OffsetTimeDigitized',
+        'SubSecTime',
+        'SubSecTimeOriginal',
+        'SubSecTimeDigitized',
     ]
 
     # CreationDate lives in the QuickTime Keys directory; writing it without a
@@ -390,6 +399,15 @@ def copy_time(
     # land in UserData); picture files keep the plain EXIF tags.
     video_only_tags = {'CreationDate'}
     video_keys_tags = {'CreationDate', 'Make', 'Model'}
+    # EXIF tags with no QuickTime counterpart, never written to video files.
+    pic_only_tags = {
+        'OffsetTime',
+        'OffsetTimeOriginal',
+        'OffsetTimeDigitized',
+        'SubSecTime',
+        'SubSecTimeOriginal',
+        'SubSecTimeDigitized',
+    }
 
     exif = Exiftool(verbose=cli_options.verbose)
     tag_values = exif.read([src], tags=time_tags + list(EXIF_CAMERA_MODEL_TAGS.keys()))
@@ -411,6 +429,8 @@ def copy_time(
         if video_files:
             video_tags: dict[str, str] = {}
             for tag, value in tag_values.items():
+                if tag in pic_only_tags:
+                    continue
                 if tag in video_keys_tags:
                     video_tags[f'Keys:{tag}'] = value
                 else:
