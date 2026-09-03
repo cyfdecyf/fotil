@@ -154,7 +154,9 @@ def _filter_files_with_tags(
 
     for f in fpaths:
         metadata = exif.read([f], tags=tags)
-        if metadata and len(metadata[0]) == 0:
+        # exiftool -json always includes a "SourceFile" key, so check the
+        # requested tags instead of the dict length.
+        if metadata and all(tag not in metadata[0] for tag in tags):
             notag_fpaths.append(f)
         else:
             skip_files.append(f)
