@@ -5,6 +5,7 @@ import re
 import shutil
 
 from datetime import datetime as dt
+from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
 
@@ -36,6 +37,9 @@ DEFAULT_CAMERA_MODEL = {
 # File naming patterns for camera detection
 _FNAME_RE_SONY_VIDEO = re.compile(r'C\d\d\d\d.*\.MP4')
 _FNAME_RE_SONY_IMAGE = re.compile(r'DSC\d\d\d\d.*')
+
+# Timezone offset tag written by Sony cameras, e.g. "+09:00"
+_TZ_OFFSET_RE = re.compile(r'([+-])(\d{2})')
 
 # Local timezone offset in hours
 _local_tz_offset = dt.now().astimezone().utcoffset()
@@ -133,6 +137,74 @@ def _shift_to_local_timezone(timezone: int) -> int:
     """
     utcshift = _shift_to_utc_timezone(timezone)
     return utcshift + LOCAL_TZ_SHIFT_HOUR
+
+
+def _format_tz_offset(offset_hour: int) -> str:
+    """Format timezone offset in hours as an EXIF offset suffix, e.g. "+09:00"."""
+    return f'{offset_hour:+03d}:00'
+
+
+def _parse_tz_offset_hours(value: str) -> int | None:
+    """Parse a timezone offset string like "+09:00" into signed hours."""
+    m = _TZ_OFFSET_RE.match(value.strip())
+    if not m:
+        return None
+    offset = int(m.group(2))
+    return -offset if m.group(1) == '-' else offset
+
+
+def _shooting_tz_offset(fpath: Path, camera_tz: int) -> int:
+    """Timezone offset in hours of the shooting location for a video file.
+
+    Sony cameras store the camera timezone in the rtmd "TimeZone" tag; use it
+    when present, and otherwise assume the camera clock timezone.
+
+    Args:
+        fpath: Path to the video file.
+        camera_tz: Camera clock timezone offset in hours, as fallback.
+
+    Returns:
+        Timezone offset in hours.
+    """
+    tags = Exiftool().read([fpath], tags=['TimeZone'])
+    if tags:
+        offset = _parse_tz_offset_hours(tags[0].get('TimeZone', ''))
+        if offset is not None:
+            return offset
+    return camera_tz
+
+
+def _write_video_creation_date(exif: Exiftool, fpath: Path, tz_hour: int) -> None:
+    """Write Keys:CreationDate with local time + tz, like iPhone videos.
+
+    macOS Photos and QuickTime Player prefer this vendor tag over the naive
+    QuickTime times, which the geotag video flow leaves in UTC. Skipped when
+    the video already carries one, e.g. from an iPhone.
+
+    Args:
+        exif: Exiftool instance.
+        fpath: Path to the video file.
+        tz_hour: Shooting location timezone offset in hours.
+    """
+    existing = exif.read([fpath], tags=['CreationDate'])
+    if existing and 'CreationDate' in existing[0]:
+        if cli_options.verbose:
+            print(f'{fpath} already has CreationDate, keep it')
+        return
+
+    tags = exif.read([fpath], tags=['CreateDate'])
+    if not tags or 'CreateDate' not in tags[0]:
+        return
+
+    try:
+        utc_time = Exiftool.parse_date(tags[0]['CreateDate'])
+    except ValueError:
+        print(f'ignore parse date error for {fpath} CreateDate {tags[0]["CreateDate"]}')
+        return
+
+    local_time = utc_time + timedelta(hours=tz_hour)
+    value = f'{local_time:%Y:%m:%d %H:%M:%S}{_format_tz_offset(tz_hour)}'
+    exif.write([fpath], {'Keys:CreationDate': value})
 
 
 def _filter_files_with_tags(
@@ -486,6 +558,14 @@ def video(
             help='Timezone for input video files (hour offset to UTC or "auto")',
         ),
     ] = 'auto',
+    shooting_tz: Annotated[
+        str,
+        typer.Option(
+            '--shooting-tz',
+            help='Shooting location timezone offset in hours, stored in Keys:CreationDate '
+            '("auto": Sony TimeZone tag, else the --timezone value)',
+        ),
+    ] = 'auto',
     force: Annotated[
         bool,
         typer.Option(
@@ -499,6 +579,10 @@ def video(
     mov (QuickTime) file. For mov files, we copy an empty jpeg file and set its
     creation time the same as the mov file. Let exiftool do geotag then copy the
     geotag to mov file.
+
+    Also write Keys:CreationDate with local time + timezone, the vendor tag
+    iPhone videos carry and macOS Photos / QuickTime Player prefer over the
+    naive QuickTime times (which are left in UTC).
     """
     verbose = cli_options.verbose
     fpaths = _expand_directories(fpaths, pattern if pattern else None)
@@ -540,7 +624,10 @@ def video(
 
             if tag_file_time_shift != 0:
                 exif.shift_time(
-                    [dst], tag_file_time_shift, tags=EXIF_DATE_TAGS, overwrite_original=True
+                    [dst],
+                    tag_file_time_shift,
+                    tags=EXIF_DATE_TAGS,
+                    overwrite_original=True,
                 )
 
             print(f'\t{dst} created')
@@ -558,6 +645,14 @@ def video(
         geotag_jpg_file = video2tag[vfile]
         copy_gps(geotag_jpg_file, [vfile], time_shift=str(time_shift))
         geotag_jpg_file.unlink()
+
+    print('====== add Keys:CreationDate for video files ======')
+    for vfile in fpaths:
+        if shooting_tz == 'auto':
+            tz_hour = _shooting_tz_offset(vfile, timezone_int)
+        else:
+            tz_hour = int(shooting_tz)
+        _write_video_creation_date(exif, vfile, tz_hour)
 
 
 @app.command(name='camera')
