@@ -4,12 +4,16 @@
 
 - Auto import from specified source directory to destination
   - Dedup when importing files
+- Geotag for photos and videos
+  - Add GPS info from GPS log
+  - Copy time and GPS from other files
+  - Time and GPS tags works with iOS and macOS Photos.app
 
 ## Dev install
 
 Run the following command:
 
-```
+```bash
 uv sync
 ```
 
