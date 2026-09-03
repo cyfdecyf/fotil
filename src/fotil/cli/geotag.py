@@ -383,10 +383,13 @@ def copy_time(
         'EncodingTime',
     ]
 
-    # Tags that live in the QuickTime Keys directory. Writing them without a
-    # group prefix is ambiguous in exiftool (same-named XMP tag wins), so they
-    # must be written with the explicit "Keys:" prefix for video files.
-    video_keys_tags = {'CreationDate'}
+    # CreationDate lives in the QuickTime Keys directory; writing it without a
+    # group prefix is ambiguous in exiftool (same-named XMP tag wins), so video
+    # files need the explicit "Keys:" prefix. Make/Model are also written to
+    # Keys for videos, where iPhone videos store them (unprefixed they would
+    # land in UserData); picture files keep the plain EXIF tags.
+    video_only_tags = {'CreationDate'}
+    video_keys_tags = {'CreationDate', 'Make', 'Model'}
 
     exif = Exiftool(verbose=cli_options.verbose)
     tag_values = exif.read([src], tags=time_tags + list(EXIF_CAMERA_MODEL_TAGS.keys()))
@@ -402,7 +405,7 @@ def copy_time(
         pic_files = [f for f in file_paths if not is_video(f)]
 
         if pic_files:
-            pic_tags = {k: v for k, v in tag_values.items() if k not in video_keys_tags}
+            pic_tags = {k: v for k, v in tag_values.items() if k not in video_only_tags}
             exif.write(pic_files, pic_tags, overwrite_original=False)
 
         if video_files:
@@ -681,4 +684,17 @@ def make_model(
         return
 
     exif = Exiftool(verbose=verbose)
-    exif.write(fpaths, {'Make': make, 'Model': model}, overwrite_original=False)
+    video_files = [f for f in fpaths if is_video(f)]
+    pic_files = [f for f in fpaths if not is_video(f)]
+
+    if pic_files:
+        exif.write(pic_files, {'Make': make, 'Model': model}, overwrite_original=False)
+
+    # iPhone videos store make/model in the QuickTime Keys group; unprefixed
+    # they would land in UserData instead.
+    if video_files:
+        exif.write(
+            video_files,
+            {'Keys:Make': make, 'Keys:Model': model},
+            overwrite_original=False,
+        )
