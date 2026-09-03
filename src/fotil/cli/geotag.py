@@ -2,6 +2,7 @@
 
 import importlib.resources as resources
 import re
+import shutil
 
 from datetime import datetime as dt
 from pathlib import Path
@@ -521,21 +522,24 @@ def video(
     exif = Exiftool(verbose=verbose)
 
     for vfile in fpaths:
-        dst = vfile.with_suffix(f'{vfile.stem}_fuji_geotag_tmp.jpg')
+        dst = vfile.with_name(f'{vfile.stem}_fuji_geotag_tmp.jpg')
         video2tag[vfile] = dst
 
-        if dst.exists():
-            dst.unlink()
+        # exiftool can't create files, so seed the tmp jpg from the bundled
+        # empty jpeg (shutil.copy overwrites any stale one).
+        shutil.copy(_get_tag_file(), dst)
 
         tags_list = exif.read([vfile], tags=['CreateDate'])
         if tags_list and 'CreateDate' in tags_list[0]:
             create_date = tags_list[0]['CreateDate']
             date_tag_values = dict.fromkeys(EXIF_DATE_TAGS, create_date)
 
-            exif.write([dst], date_tag_values)
+            exif.write([dst], date_tag_values, overwrite_original=True)
 
             if tag_file_time_shift != 0:
-                exif.shift_time([dst], tag_file_time_shift, tags=EXIF_DATE_TAGS)
+                exif.shift_time(
+                    [dst], tag_file_time_shift, tags=EXIF_DATE_TAGS, overwrite_original=True
+                )
 
             print(f'\t{dst} created')
 
