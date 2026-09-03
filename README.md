@@ -8,6 +8,7 @@
   - Add GPS info from GPS log
   - Copy time and GPS from other files, or from a Sony sidecar XML
   - Time and GPS tags works with iOS and macOS Photos.app
+- Local web UI to review pictures and clean up raw files
 
 ## Dev install
 
@@ -16,6 +17,41 @@ Run the following command:
 ```bash
 uv sync
 ```
+
+## Library config
+
+Libraries are configured in `~/.config/fotil/fotil.toml` (override with the
+global `--config` option). A library points at the processed pictures, the
+raw files and the trash directory:
+
+```toml
+default_library = 'main'
+
+[library.main]
+pic_dir = '/path/to/pic'     # processed pictures (jpg/heif/...)
+raw_dir = '/path/to/raw'     # raw files, mirroring pic_dir layout
+trash_dir = '/path/to/trash' # cleanup destination, nothing is ever deleted
+```
+
+Files map between `pic_dir` and `raw_dir` by matching file stem, so
+`2024/05-01/DSC08924.JPG` corresponds to `2024/05-01/DSC08924.ARW`.
+
+## Review pictures in the web UI
+
+`fotil web` starts a local web UI (default `http://127.0.0.1:8000`) for the
+quick cull after importing:
+
+```bash
+fotil web                # fotil web --host 0.0.0.0 --port 8000 to expose it
+```
+
+Browse the `pic_dir` directory tree, click pictures to select the ones to
+throw away, then hit **cleanup raw**: the selected pictures and their
+same-stem raw files are moved into `trash_dir`, mirroring the original
+layout. Nothing is deleted — restore by moving files back by hand.
+
+HEIF/HIF pictures (Sony camera format) are transcoded to cached JPEG
+previews under `~/.cache/fotil/web` for display; originals stay untouched.
 
 ## Restore date and GPS on an exported video
 

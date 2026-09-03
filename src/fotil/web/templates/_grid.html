@@ -1,0 +1,26 @@
+<div id="grid-root" data-library="{{ library }}" data-dir="{{ dir }}">
+  <nav class="flex items-center gap-1 mb-4 text-sm">
+    {% for name, rel in breadcrumb %}
+    <a hx-get="/grid?library={{ library | urlencode }}&dir={{ rel | urlencode }}&offset=0"
+       hx-target="#main" hx-swap="innerHTML"
+       class="hover:underline {% if loop.last %}font-semibold{% endif %}">{{ name }}</a>
+    {% if not loop.last %}<span class="text-neutral-400">/</span>{% endif %}
+    {% endfor %}
+    <span class="ml-3 text-xs text-neutral-400">共 {{ total }} 张</span>
+  </nav>
+
+  {% if subdirs %}
+  <div class="flex flex-wrap gap-2 mb-4">
+    {% for d in subdirs %}
+    {% set child = (dir ~ '/' ~ d) if dir else d %}
+    <a hx-get="/grid?library={{ library | urlencode }}&dir={{ child | urlencode }}&offset=0"
+       hx-target="#main" hx-swap="innerHTML"
+       class="text-sm border border-neutral-300 bg-white rounded px-3 py-2 hover:bg-neutral-100">
+      📁 {{ d }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% include '_grid_photos.html' %}
+</div>

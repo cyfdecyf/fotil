@@ -1,0 +1,14 @@
+{% for d in dirs %}
+{% set child = (dir ~ '/' ~ d) if dir else d %}
+<li class="tree-node">
+  <span class="tree-toggle inline-block w-4 text-center text-neutral-400 cursor-pointer select-none"
+        data-loaded="false"
+        hx-get="/tree?library={{ library | urlencode }}&dir={{ child | urlencode }}"
+        hx-target="next .tree-children" hx-swap="innerHTML">▸</span>
+  <a class="tree-link text-sm px-1 rounded hover:bg-neutral-100"
+     data-dir="{{ child }}"
+     hx-get="/grid?library={{ library | urlencode }}&dir={{ child | urlencode }}&offset=0"
+     hx-target="#main" hx-swap="innerHTML">{{ d }}</a>
+  <ul class="tree-children ml-4"></ul>
+</li>
+{% endfor %}

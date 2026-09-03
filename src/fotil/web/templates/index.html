@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}fotil · {{ library }}{% endblock %}
+{% block body %}
+<header class="flex items-center gap-3 px-4 py-2 bg-white border-b border-neutral-200 shadow-sm">
+  <h1 class="text-lg font-semibold">fotil</h1>
+  <select id="library-select"
+          class="text-sm border border-neutral-300 rounded px-2 py-1 bg-white">
+    {% for name in libraries %}
+    <option value="{{ name }}" {% if name == library %}selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+  </select>
+  <span class="text-xs text-neutral-400 truncate max-w-md" title="{{ trash_dir }}">trash: {{ trash_dir }}</span>
+  <div class="ml-auto flex items-center gap-2">
+    <button id="selected-button"
+            class="text-sm border border-neutral-300 rounded px-3 py-1 hover:bg-neutral-100">
+      已选 <span id="selected-count" class="font-semibold">0</span>
+    </button>
+    <button id="cleanup-button" disabled
+            class="text-sm text-white bg-red-600 hover:bg-red-700 rounded px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed">
+      cleanup raw
+    </button>
+  </div>
+</header>
+
+<div class="flex flex-1 min-h-0">
+  <aside class="w-60 shrink-0 border-r border-neutral-200 bg-white overflow-auto p-2">
+    <a class="tree-link block text-sm px-2 py-1 rounded hover:bg-neutral-100"
+       data-dir="" hx-get="/grid?library={{ library | urlencode }}&dir=&offset=0"
+       hx-target="#main" hx-swap="innerHTML">根目录</a>
+    <ul class="tree" id="tree">{% with dir = '' %}{% include '_tree.html' %}{% endwith %}</ul>
+  </aside>
+
+  <main id="main" class="flex-1 overflow-auto p-4">
+    {% include '_grid.html' %}
+  </main>
+</div>
+
+<dialog id="cleanup-dialog" class="rounded-lg shadow-xl p-6 w-[28rem] backdrop:bg-black/30">
+  <h2 class="font-semibold mb-2">确认清理</h2>
+  <p class="text-sm mb-2">
+    将 <span id="cleanup-count" class="font-semibold">0</span> 张选中的照片移入
+    <code class="text-xs bg-neutral-100 px-1 rounded break-all">{{ trash_dir }}</code>,
+    并把 raw 目录下同名的 raw 文件一并移入 trash。
+  </p>
+  <p class="text-xs text-neutral-500 mb-4">文件只是移动到 trash,不会真正删除,可手工找回。</p>
+  <form id="cleanup-form">
+    <input type="hidden" name="library" value="{{ library }}">
+    <span id="cleanup-pics-inputs"></span>
+  </form>
+  <div class="flex justify-end gap-2">
+    <button id="cleanup-cancel" class="text-sm border border-neutral-300 rounded px-3 py-1 hover:bg-neutral-100">取消</button>
+    <button id="cleanup-confirm"
+            class="text-sm text-white bg-red-600 hover:bg-red-700 rounded px-3 py-1"
+            hx-post="/cleanup" hx-include="#cleanup-form"
+            hx-target="#cleanup-result" hx-swap="innerHTML">确认清理</button>
+  </div>
+</dialog>
+
+<dialog id="selected-dialog" class="rounded-lg shadow-xl p-6 w-[36rem] backdrop:bg-black/30">
+  <div class="flex justify-between items-center mb-3">
+    <h2 class="font-semibold">已选照片</h2>
+    <button id="selected-close" class="text-neutral-500 hover:text-neutral-900 text-xl leading-none">×</button>
+  </div>
+  <div id="selected-items" class="grid grid-cols-4 gap-3 overflow-auto max-h-[24rem]"></div>
+</dialog>
+
+<div id="cleanup-result"></div>
+{% endblock %}
