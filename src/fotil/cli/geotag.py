@@ -477,8 +477,9 @@ def copy_gps(
                 lat = float(tag_values['GPSLatitude'])
                 lon = float(tag_values['GPSLongitude'])
                 # ISO-6709 allows omitting the altitude; don't fabricate a
-                # "+000.000" sea-level value when the source has none.
-                iso6709 = f'{lat:+.4f}{lon:+.4f}'
+                # "+000.000" sea-level value when the source has none. Pad the
+                # integer digits (2 for latitude, 3 for longitude).
+                iso6709 = f'{lat:+08.4f}{lon:+09.4f}'
                 if 'GPSAltitude' in tag_values:
                     iso6709 += f'{float(tag_values["GPSAltitude"]):+08.3f}'
                 video_tags['Keys:GPSCoordinates'] = f'{iso6709}/'
