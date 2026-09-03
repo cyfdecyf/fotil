@@ -1,0 +1,123 @@
+ExifToolVersion                 : 13.55
+FileName                        : C6129.MP4
+Directory                       : .
+FileSize                        : 134 MB
+FileModifyDate                  : 2025:08:29 21:45:28+08:00
+FileAccessDate                  : 2026:07:19 21:08:26+08:00
+FileInodeChangeDate             : 2026:07:19 21:08:26+08:00
+FilePermissions                 : -rwx------
+FileType                        : MP4
+FileTypeExtension               : mp4
+MIMEType                        : video/mp4
+MajorBrand                      : Sony XAVC
+MinorVersion                    : 10b.1f.ff
+CompatibleBrands                : XAVC, mp42, nras, iso6
+FileFunctionFlags               : Additional tracks
+VideoTrackID                    : 1
+VideoCodec                      : hvc1
+VideoAttributes                 : Variable bitrate
+VideoAvgBitrate                 : 50 Mbps
+VideoMaxBitrate                 : 50 Mbps
+VideoAvgFrameRate               : 23.976
+VideoMaxFrameRate               : 23.976
+VideoSize                       : 3840x2160
+PixelAspectRatio                : 1:1
+AudioTrackID                    : 2
+AudioCodec                      : twos
+AudioAttributes                 : (none)
+AudioAvgBitrate                 : 1.54 Mbps
+AudioMaxBitrate                 : 1.54 Mbps
+MediaDataSize                   : 134217728
+MediaDataOffset                 : 131072
+MovieHeaderVersion              : 0
+CreateDate                      : 2025:08:29 12:45:10
+ModifyDate                      : 2025:08:29 12:45:10
+TimeScale                       : 48000
+Duration                        : 17.52 s
+PreferredRate                   : 1
+PreferredVolume                 : 100.00%
+PreviewTime                     : 0 s
+PreviewDuration                 : 0 s
+PosterTime                      : 0 s
+SelectionTime                   : 0 s
+SelectionDuration               : 0 s
+CurrentTime                     : 0 s
+NextTrackID                     : 4
+TrackHeaderVersion              : 0
+TrackCreateDate                 : 2025:08:29 12:45:10
+TrackModifyDate                 : 2025:08:29 12:45:10
+TrackID                         : 1
+TrackDuration                   : 17.52 s
+TrackLayer                      : 0
+TrackVolume                     : 0.00%
+ImageWidth                      : 3840
+ImageHeight                     : 2160
+GraphicsMode                    : srcCopy
+OpColor                         : 0 0 0
+CompressorID                    : hvc1
+SourceImageWidth                : 3840
+SourceImageHeight               : 2160
+XResolution                     : 72
+YResolution                     : 72
+CompressorName                  : HEVC Coding
+BitDepth                        : 24
+VideoFrameRate                  : 23.976
+Balance                         : 0
+AudioFormat                     : twos
+AudioChannels                   : 2
+AudioBitsPerSample              : 16
+AudioSampleRate                 : 48000
+MatrixStructure                 : 1 0 0 0 1 0 0 0 1
+ContentDescribes                : Track 1
+MediaHeaderVersion              : 0
+MediaCreateDate                 : 2025:08:29 12:45:10
+MediaModifyDate                 : 2025:08:29 12:45:10
+MediaTimeScale                  : 24000
+MediaDuration                   : 17.52 s
+MediaLanguageCode               : und
+Warning                         : [minor] The ExtractEmbedded option may find more tags in the media data
+MetaFormat                      : rtmd
+TrackProperty                   : [4]; No attributes; Priority 0
+TimeZone                        : +09:00
+HandlerType                     : Non-Real Time Metadata
+HandlerDescription              : Non-Real Time Metadata
+LastUpdate                      : 2025:08:29 21:45:28+09:00
+TargetMaterialUmidRef           : 060A2B340101010501010D431300000080F4025F160906C99C50D1FFFECF5689
+DurationValue                   : 420
+LtcChangeTableTcFps             : 24
+LtcChangeTableHalfStep          : false
+LtcChangeTableLtcChangeFrameCount: 0
+LtcChangeTableLtcChangeValue    : 16261010
+LtcChangeTableLtcChangeStatus   : increment
+CreationDateValue               : 2025:08:29 21:45:10+09:00
+KlvPacketTableKlvPacketKey      : 060E2B34010101050301020A02000000
+KlvPacketTableKlvPacketFrameCount: 0
+KlvPacketTableKlvPacketLengthValue: 095F5265635374617274
+KlvPacketTableKlvPacketStatus   : spot
+VideoFormatVideoRecPortPort     : DIRECT
+VideoFormatVideoFrameVideoCodec : HEVC_3840_2160_M42210P@L5HT
+VideoFormatVideoFrameCaptureFps : 23.98p
+VideoFormatVideoFrameFormatFps  : 23.98p
+VideoFormatVideoLayoutPixel     : 3840
+VideoFormatVideoLayoutNumOfVerticalLine: 2160
+VideoFormatVideoLayoutAspectRatio: 16:9
+AudioFormatNumOfChannel         : 2
+AudioFormatAudioRecPortPort     : DIRECT
+AudioFormatAudioRecPortAudioCodec: LPCM16
+AudioFormatAudioRecPortTrackDst : CH1
+DeviceManufacturer              : Sony
+DeviceModelName                 : ILCE-7M4
+DeviceSerialNo                  : 99999
+LensModelName                   : FE PZ 16-35mm F4 G
+RecordingModeType               : normal
+RecordingModeCacheRec           : false
+AcquisitionRecordGroupName      : ExifGPS
+AcquisitionRecordGroupItemName  : VersionID
+AcquisitionRecordGroupItemValue : 2.2.0.0
+AcquisitionRecordChangeTableName: ImagerControlInformation
+AcquisitionRecordChangeTableEventFrameCount: 0
+AcquisitionRecordChangeTableEventStatus: start
+ImageSize                       : 3840x2160
+Megapixels                      : 8.3
+AvgBitrate                      : 61.3 Mbps
+Rotation                        : 0

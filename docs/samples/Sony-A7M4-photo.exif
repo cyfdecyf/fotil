@@ -1,0 +1,274 @@
+ExifToolVersion                 : 13.55
+FileName                        : DSC08924.ARW
+Directory                       : tmp
+FileSize                        : 42 MB
+FileModifyDate                  : 2026:09:03 22:04:52+08:00
+FileAccessDate                  : 2026:09:03 22:04:53+08:00
+FileInodeChangeDate             : 2026:09:03 22:04:52+08:00
+FilePermissions                 : -rwxr-xr-x
+FileType                        : ARW
+FileTypeExtension               : arw
+MIMEType                        : image/x-sony-arw
+ExifByteOrder                   : Little-endian (Intel, II)
+ImageDescription                : 
+Make                            : SONY
+Model                           : ILCE-7M4
+Orientation                     : Horizontal (normal)
+Software                        : ILCE-7M4 v3.02
+ModifyDate                      : 2025:08:29 21:51:39
+ImageWidth                      : 7168
+ImageHeight                     : 5120
+Compression                     : JPEG
+PhotometricInterpretation       : Color Filter Array
+SamplesPerPixel                 : 1
+PlanarConfiguration             : Chunky
+XResolution                     : 350
+YResolution                     : 350
+ResolutionUnit                  : inches
+CFARepeatPatternDim             : 2 2
+CFAPattern2                     : 0 1 1 2
+SonyRawFileType                 : Sony Lossless Compressed RAW 2
+SonyToneCurve                   : 0 0 0 0
+StripOffsets                    : 4050944
+RowsPerStrip                    : 5120
+StripByteCounts                 : 37522560
+ChromaticAberrationCorrection   : Auto
+DistortionCorrection            : Auto fixed by lens
+DefaultCropOrigin               : 12 8
+DefaultCropSize                 : 7008 4672
+SonyCropTopLeft                 : 12 372
+SonyCropSize                    : 7008 3944
+BitsPerSample                   : 14
+SonyRawImageSize                : 7032 4688
+TileWidth                       : 512
+TileLength                      : 512
+TileOffsets                     : (Binary data 1236 bytes, use -b option to extract)
+TileByteCounts                  : (Binary data 979 bytes, use -b option to extract)
+PreviewImageStart               : 196770
+PreviewImageLength              : 384920
+YCbCrPositioning                : Co-sited
+DocumentID                      : urn:uuid:88eb77f7-f123-4d9d-a333-767afdbe3b78
+InstanceID                      : urn:uuid:2d41fa87-ab8a-4c8c-a877-374ff8ac3362
+FNumber                         : 4.0
+ExposureProgram                 : Aperture-priority AE
+ISO                             : 1600
+SensitivityType                 : Recommended Exposure Index
+RecommendedExposureIndex        : 1600
+ExifVersion                     : 0232
+DateTimeOriginal                : 2025:08:29 21:51:39
+CreateDate                      : 2025:08:29 21:51:39
+OffsetTime                      : +09:00
+OffsetTimeOriginal              : +09:00
+OffsetTimeDigitized             : +09:00
+ComponentsConfiguration         : Y, Cb, Cr, -
+CompressedBitsPerPixel          : 11
+BrightnessValue                 : -1.01015625
+ExposureCompensation            : -0.7
+MaxApertureValue                : 4.0
+MeteringMode                    : Multi-segment
+LightSource                     : Unknown
+Flash                           : Off, Did not fire
+Rating                          : 0
+Brightness                      : 0
+LongExposureNoiseReduction      : On (unused)
+HighISONoiseReduction           : Off
+HDR                             : Off; Uncorrected image
+WBShiftAB_GM                    : 0 0
+WBShiftAB_GM_Precise            : 0.00 0.00
+ColorTemperature                : Auto
+ColorCompensationFilter         : 0
+SceneMode                       : Standard
+ZoneMatching                    : ISO Setting Used
+DynamicRangeOptimizer           : Lv3
+ImageStabilization              : On
+ColorMode                       : FL
+FullImageSize                   : 7008x3944
+PreviewImageSize                : 1920x1080
+FileFormat                      : ARW 5.0.1
+FlashExposureComp               : 0
+WhiteBalanceFineTune            : 0
+WhiteBalance                    : Auto
+SonyModelID                     : ILCE-7M4
+MultiFrameNoiseReduction        : Off
+PictureEffect                   : Off
+SoftSkinEffect                  : Off
+VignettingCorrection            : Auto
+LateralChromaticAberration      : Auto
+DistortionCorrectionSetting     : Auto
+LensType                        : E-Mount, T-Mount, Other Lens or no lens
+LensSpec                        : FE PZ 16-35mm F4 G
+AutoPortraitFramed              : No
+FlashAction                     : Did not fire
+ElectronicFrontCurtainShutter   : On
+FocusMode                       : AF-A
+AFAreaModeSetting               : Wide
+FlexibleSpotPosition            : 0 0
+AFPointSelected                 : n/a
+AFPointsUsed                    : (none)
+AFTracking                      : Off
+FocalPlaneAFPointsUsed          : 9
+FocalPlaneAFPointArea           : 640 360
+FocalPlaneAFPointLocation1      : 320 240
+FocalPlaneAFPointLocation2      : 338 240
+FocalPlaneAFPointLocation3      : 338 264
+FocalPlaneAFPointLocation4      : 320 264
+FocalPlaneAFPointLocation5      : 302 264
+FocalPlaneAFPointLocation6      : 302 240
+FocalPlaneAFPointLocation7      : 302 216
+FocalPlaneAFPointLocation8      : 320 216
+FocalPlaneAFPointLocation9      : 338 216
+MultiFrameNREffect              : Normal
+FocusLocation                   : 7008 3944 3504 1972
+VariableLowPassFilter           : n/a
+PrioritySetInAWB                : Ambience
+MeteringMode2                   : Multi-segment
+ExposureStandardAdjustment      : 0
+RAWFileType                     : Lossless Compressed RAW
+Quality                         : RAW + Fine
+PixelShiftInfo                  : n/a
+Shadows                         : 0
+Highlights                      : 0
+Fade                            : 0
+SharpnessRange                  : +3
+Clarity                         : +1
+FocusFrameSize                  : 153x156
+JPEG-HEIFSwitch                 : HEIF
+HiddenDataOffset                : 143360
+HiddenDataLength                : 53248
+FlashLevel                      : Normal
+ReleaseMode                     : Normal
+SequenceNumber                  : Single
+Anti-Blur                       : On (Shooting)
+IntelligentAuto                 : Off
+SequenceFileNumber              : 1
+SequenceLength                  : 1 file
+CameraOrientation               : Horizontal (normal)
+Quality2                        : RAW + HEIF
+ISOSetting                      : Auto
+ISOAutoMin                      : 100
+ISOAutoMax                      : 12800
+AmbientTemperature              : 30 C
+AFAreaMode                      : Multi
+FocusPosition2                  : 255
+SonyISO                         : 1516
+StopsAboveBaseISO               : 3.9
+SonyExposureTime2               : 1/32
+ExposureTime                    : 1/30
+SonyFNumber2                    : 4.0
+SonyMaxApertureValue            : 4.0
+SequenceImageNumber             : 1
+CreativeStyle                   : FL
+LensFormat                      : Full-frame
+LensMount                       : E-mount
+LensType2                       : Unknown E-mount lens or other lens
+PictureProfile                  : FL
+FocalLength                     : 20.0 mm
+MinFocalLength                  : 16.0 mm
+MaxFocalLength                  : 35.0 mm
+APS-CSizeCapture                : Off
+BatteryTemperature              : 40.0 C
+BatteryLevel                    : 83%
+LensMount2                      : E-mount
+LensType3                       : Sony FE PZ 16-35mm F4 G
+CameraE-mountVersion            : 1.80
+LensE-mountVersion              : 1.60
+LensFirmwareVersion             : Ver.01.001
+Shutter                         : Mechanical (2900 5326 6715)
+FlashStatus                     : No Flash present
+ShutterCount                    : 9165
+ShutterCount2                   : 9165
+SonyExposureTime                : 1/32
+SonyFNumber                     : 4.0
+ReleaseMode2                    : Normal
+InternalSerialNumber            : 000000999999
+UserComment                     : 
+SubSecTime                      : 302
+SubSecTimeOriginal              : 302
+SubSecTimeDigitized             : 302
+FlashpixVersion                 : 0100
+ColorSpace                      : sRGB
+ExifImageWidth                  : 7008
+ExifImageHeight                 : 3944
+InteropIndex                    : R98 - DCF basic file (sRGB)
+InteropVersion                  : 0100
+FileSource                      : Digital Camera
+SceneType                       : Directly photographed
+CustomRendered                  : Normal
+ExposureMode                    : Auto
+DigitalZoomRatio                : 1
+FocalLengthIn35mmFormat         : 20 mm
+SceneCaptureType                : Standard
+Contrast                        : Normal
+Saturation                      : Normal
+Sharpness                       : Normal
+LensInfo                        : 16-35mm f/4
+LensModel                       : FE PZ 16-35mm F4 G
+CompositeImage                  : Unknown
+GPSVersionID                    : 2.3.0.0
+GPSLatitudeRef                  : North
+GPSLongitudeRef                 : East
+GPSTimeStamp                    : 12:51:39
+GPSStatus                       : Measurement Active
+GPSMeasureMode                  : 2-Dimensional Measurement
+GPSMapDatum                     : WGS-84
+GPSDateStamp                    : 2025:08:29
+GPSDifferential                 : No Correction
+PrintIMVersion                  : 0300
+SR2SubIFDOffset                 : 65902
+SR2SubIFDLength                 : 35398
+SR2SubIFDKey                    : 0x44332211
+BlackLevel                      : 512 512 512 512
+WB_RGGBLevelsAuto               : 1809 1024 1024 2165
+WB_RGGBLevels                   : 1809 1024 1024 2165
+ColorMatrix                     : 965 76 -17 65 820 139 98 -108 1034
+WB_RGBLevelsDaylight            : 2446 1024 1660
+WB_RGBLevelsCloudy              : 2639 1024 1523
+WB_RGBLevelsTungsten            : 1520 1024 2976
+WB_RGBLevelsFlash               : 2693 1024 1480
+WB_RGBLevels4500K               : 2225 1024 1820
+WB_RGBLevelsShade               : 2865 1024 1348
+WB_RGBLevelsFluorescent         : 2284 1024 2283
+WB_RGBLevelsFluorescentP1       : 2439 1024 1682
+WB_RGBLevelsFluorescentP2       : 2698 1024 1570
+WB_RGBLevelsFluorescentM1       : 1788 1024 2830
+WB_RGBLevels8500K               : 2932 1024 1276
+WB_RGBLevels6000K               : 2583 1024 1518
+WB_RGBLevels3200K               : 1756 1024 2457
+WB_RGBLevels2500K               : 1398 1024 3297
+WhiteLevel                      : 15360 15360 15360
+VignettingCorrParams            : 16 0 32 192 448 800 1184 1728 2496 3456 4576 5760 6880 8000 9088 10144 11200
+ChromaticAberrationCorrParams   : 32 256 256 256 384 384 384 384 384 384 384 384 384 384 384 256 256 -384 -256 -128 0 0 0 0 0 0 0 0 0 128 128 128 256
+DistortionCorrParams            : 16 13 -2 -31 -66 -119 -178 -252 -331 -420 -510 -607 -703 -801 -897 -995 -1091
+ThumbnailOffset                 : 44192
+ThumbnailLength                 : 9387
+SubfileType                     : Reduced-resolution image
+JpgFromRawStart                 : 585728
+JpgFromRawLength                : 3461745
+YCbCrCoefficients               : 0.299 0.587 0.114
+YCbCrSubSampling                : YCbCr4:2:2 (2 1)
+ReferenceBlackWhite             : 0 255 128 128 128 128
+Aperture                        : 4.0
+BlueBalance                     : 2.114258
+CFAPattern                      : [Red,Green][Green,Blue]
+ImageSize                       : 7168x5120
+JpgFromRaw                      : (Binary data 3461745 bytes, use -b option to extract)
+LensID                          : Sony FE PZ 16-35mm F4 G
+Megapixels                      : 36.7
+PreviewImage                    : (Binary data 384920 bytes, use -b option to extract)
+RedBalance                      : 1.766602
+ScaleFactor35efl                : 1.0
+ShutterSpeed                    : 1/30
+SubSecCreateDate                : 2025:08:29 21:51:39.302+09:00
+SubSecDateTimeOriginal          : 2025:08:29 21:51:39.302+09:00
+SubSecModifyDate                : 2025:08:29 21:51:39.302+09:00
+ThumbnailImage                  : (Binary data 9387 bytes, use -b option to extract)
+GPSDateTime                     : 2025:08:29 12:51:39Z
+GPSLatitude                     : 34 deg 42' 19.88" N
+GPSLongitude                    : 135 deg 29' 36.09" E
+FocusDistance2                  : inf
+CircleOfConfusion               : 0.030 mm
+FOV                             : 84.0 deg
+FocalLength35efl                : 20.0 mm (35 mm equivalent: 20.0 mm)
+GPSPosition                     : 34 deg 42' 19.88" N, 135 deg 29' 36.09" E
+HyperfocalDistance              : 3.33 m
+LightValue                      : 4.9
