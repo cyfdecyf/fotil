@@ -5,7 +5,7 @@ import typer
 
 from fotil.library import Library
 
-from . import cli_options, get_config
+from . import get_config
 
 
 app = typer.Typer(help='Picture processing utilities.')
@@ -30,8 +30,7 @@ def cleanup_raw(
         relative_dir = raw_dir.relative_to(lib_conf.raw_dir)
     except ValueError:
         print(f'raw_dir {raw_dir} not in library {library} raw_dir {lib_conf.raw_dir}')
-        typer.Exit(code=1)
-        return  # avoid ruff warning for relative_dir
+        raise typer.Exit(code=1) from None
 
     if pic_dir is None:
         # Resolve to same relative directory under pic_dir.
@@ -42,5 +41,5 @@ def cleanup_raw(
         # For pic_dir, we allow it to be outside the library pic_dir.
         pic_dir = pic_dir.absolute()
 
-    lib = Library(conf=lib_conf, verbose=cli_options.verbose, dry_run=dry_run)
+    lib = Library(conf=lib_conf, dry_run=dry_run)
     lib.cleanup_raw(pic_dir, raw_dir)
