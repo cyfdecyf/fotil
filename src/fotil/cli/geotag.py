@@ -38,7 +38,7 @@ _FNAME_RE_SONY_VIDEO = re.compile(r'C\d\d\d\d.*\.MP4')
 _FNAME_RE_SONY_IMAGE = re.compile(r'DSC\d\d\d\d.*')
 
 # Local timezone offset in hours
-_local_tz_offset = dt.utcnow().astimezone().utcoffset()
+_local_tz_offset = dt.now().astimezone().utcoffset()
 LOCAL_TZ_SHIFT_HOUR = (
     int(_local_tz_offset.total_seconds() / 3600) if _local_tz_offset else 0
 )
