@@ -1,3 +1,13 @@
+tmp/
+.zcode
+
+# macOS
+.DS_Store
+.AppleDouble
+._*
+Icon?
+*.icloud
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
