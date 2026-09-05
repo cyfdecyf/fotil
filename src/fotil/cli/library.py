@@ -8,7 +8,12 @@ from fotil.library import Library
 from . import get_config
 
 
-app = typer.Typer(help='Picture processing utilities.')
+app = typer.Typer(
+    help='Picture processing utilities.',
+    no_args_is_help=True,
+    pretty_exceptions_enable=False,
+    context_settings={'help_option_names': ['-h', '--help']},
+)
 
 
 @app.command()

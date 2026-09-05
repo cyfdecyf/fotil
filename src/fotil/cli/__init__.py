@@ -23,6 +23,8 @@ DEFAULT_CONFIG_PATH = Path('~/.config/fotil/fotil.toml').expanduser()
 app = typer.Typer(
     name='fotil',
     help='Camera photo & video utilities.',
+    no_args_is_help=True,
+    pretty_exceptions_enable=False,
     context_settings={'help_option_names': ['-h', '--help']},
 )
 
@@ -47,10 +49,11 @@ def get_config() -> config.Config:
 
 @app.callback()
 def cli_opts(
-    verbose: bool = False,
     conf: Annotated[
         Path, typer.Option('--config', '-c', help='Path to config file.')
     ] = DEFAULT_CONFIG_PATH,
+    *,
+    verbose: bool = False,
 ):
     cli_options.verbose = verbose
     cli_options.config_path = conf
