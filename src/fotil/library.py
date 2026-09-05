@@ -26,8 +26,6 @@ class Library:
             for f in iter_directory_files(pic_dir, file_filter=self.conf.pic_file_filter)
         }
 
-        trash_dir_printed = False
-
         for f in iter_directory_files(raw_dir, file_filter=self.conf.raw_file_filter):
             if f.stem in pic_files:
                 continue
@@ -35,10 +33,10 @@ class Library:
             src = (raw_dir / f).absolute()
             src_reldir = src.relative_to(self.conf.raw_dir).parent
             trash_dir = self.conf.trash_dir / src_reldir
-            if not trash_dir_printed:
-                print(f'trash_dir: {trash_dir}')
-                trash_dir_printed = True
-                trash_dir.mkdir(parents=True, exist_ok=True)
+            if not trash_dir.exists():
+                print(f'creating trash_dir: {trash_dir}')
+                if not self.dry_run:
+                    trash_dir.mkdir(parents=True, exist_ok=True)
 
             print(f'trashing {f}')
             if not self.dry_run:
