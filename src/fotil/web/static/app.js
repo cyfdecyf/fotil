@@ -2,22 +2,34 @@
   'use strict';
 
   // Reactive UI state lives in the Alpine store `ui` (registered below):
-  // templates bind to it and repaint themselves. This file keeps only the
+  // templates bind to it and repaint themselves. This file keeps the
   // imperative behaviour — keyboard dispatch, navigation math, dialog
-  // plumbing and the htmx glue — and mutates the store instead of writing
-  // state to the DOM by hand.
-
+  // plumbing and the htmx glue. The store stays the source of truth; the two
+  // per-card classes (selected/cursor) are the one exception, written
+  // imperatively so a keypress or hover costs O(1) DOM work instead of
+  // re-running an Alpine effect on every loaded card.
   const $ = (sel) => document.querySelector(sel);
 
-  const gridPaths = () =>
-    Array.from(document.querySelectorAll('.photo-card')).map((c) => c.dataset.picPath);
+  // Card index cache: rebuilt on boot and after every grid swap, so keyboard
+  // navigation never re-queries the whole document. cardPaths follows DOM
+  // order; cardEls maps path -> <figure>.
+  let cardPaths = [];
+  let cardEls = new Map();
+
+  function rebuildCardIndex() {
+    const cards = document.querySelectorAll('.photo-card');
+    cardPaths = Array.from(cards, (c) => c.dataset.picPath);
+    cardEls = new Map(Array.from(cards, (c) => [c.dataset.picPath, c]));
+  }
+
+  const gridPaths = () => cardPaths;
 
   const hasMore = () => !!document.getElementById('load-more');
 
   // Registered on `alpine:init`; app.js loads before alpine.min.js (both
   // deferred) so the listener is in place before Alpine boots. Seeding
-  // library/dir here (rather than in boot) means the tree-link and card
-  // bindings are already correct on first paint.
+  // library/dir here (rather than in boot) means the tree-link bindings are
+  // already correct on first paint.
   document.addEventListener('alpine:init', () => {
     Alpine.store('ui', {
       library: '',
@@ -81,14 +93,19 @@
 
   // ---- Grid cursor --------------------------------------------------------
 
-  // The cursor ring itself is a template binding on cursorPath; this only
-  // updates the store and scrolls the card into view when keys moved it.
+  // The cursor ring is managed imperatively: remember the previous cursor
+  // card so a move only touches two classLists instead of every card. The
+  // store copy stays in sync — d/u, the lightbox badge and the return
+  // target on close all read cursorPath. cursorEl may go stale across an
+  // htmx swap; the afterSwap replay below re-derives it from cardEls.
+  let cursorEl = null;
+
   function setCursor(path, { scroll = true } = {}) {
+    if (cursorEl) cursorEl.classList.remove('cursor');
+    cursorEl = path ? cardEls.get(path) || null : null;
+    cursorEl?.classList.add('cursor');
     ui().cursorPath = path;
-    if (path && scroll) {
-      const card = document.querySelector(`.photo-card[data-pic-path="${CSS.escape(path)}"]`);
-      card?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
+    if (cursorEl && scroll) cursorEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   function gridColumns() {
@@ -219,14 +236,14 @@
     if (!path) return;
     // Ignore stale paths whose card no longer exists (e.g. after the grid
     // refresh following a cleanup).
-    if (!document.querySelector(`.photo-card[data-pic-path="${CSS.escape(path)}"]`)) {
-      return;
-    }
+    const card = cardEls.get(path);
+    if (!card) return;
     if (mark) {
       ui().selected.add(path);
     } else {
       ui().selected.delete(path);
     }
+    card.classList.toggle('selected', mark);
   }
 
   // Select every loaded picture, or clear the selection if all are selected.
@@ -241,6 +258,7 @@
       } else {
         st.selected.add(p);
       }
+      cardEls.get(p)?.classList.toggle('selected', !allSelected);
     }
   }
 
@@ -411,19 +429,25 @@
       return;
     }
 
-    // Grid content swapped in: pick up the new location. Selected/cursor
-    // styling and the active tree link re-apply themselves through the
-    // Alpine bindings on the fresh nodes; only a vanished cursor needs an
-    // explicit reset.
+    // Grid content swapped in: pick up the new location, rebuild the card
+    // index, then replay selected/cursor onto the fresh nodes (the old
+    // Alpine per-card binding is gone). This listener is registered before
+    // the temporary one loadMore() attaches, so the index is already fresh
+    // when loadMore resolves. A cursor whose card vanished resets to null.
     const grid = $('#grid-root');
     if (grid) {
       const st = ui();
       st.library = grid.dataset.library;
       st.dir = grid.dataset.dir;
-      if (
-        st.cursorPath &&
-        !document.querySelector(`.photo-card[data-pic-path="${CSS.escape(st.cursorPath)}"]`)
-      ) {
+      rebuildCardIndex();
+      for (const [path, el] of cardEls) {
+        el.classList.toggle('selected', st.selected.has(path));
+      }
+      if (st.cursorPath && cardEls.has(st.cursorPath)) {
+        cursorEl = cardEls.get(st.cursorPath);
+        cursorEl.classList.add('cursor');
+      } else {
+        cursorEl = null;
         st.cursorPath = null;
       }
     }
@@ -441,7 +465,11 @@
       $('#cleanup-dialog').close();
       const st = ui();
       st.selected.clear();
-      st.cursorPath = null;
+      // Card classes are imperative now, so clearing the store must also
+      // strip them (the grid-refresh swap below would replay them from the
+      // already-cleared Set, but only after a round trip).
+      for (const el of cardEls.values()) el.classList.remove('selected');
+      setCursor(null, { scroll: false });
     }
   });
 
@@ -457,6 +485,7 @@
   });
 
   function boot() {
+    rebuildCardIndex();
     $('#library-select').addEventListener('change', (e) => {
       // Full reload so the whole page (tree, grid, trash path) switches.
       const url = new URL(location.href);

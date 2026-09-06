@@ -2,8 +2,7 @@
 <div id="photo-grid" class="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
   {% for pic in pics %}
   <figure class="photo-card relative aspect-square overflow-hidden rounded-xl bg-[var(--fill)] cursor-pointer"
-          data-pic-path="{{ pic.rel }}"
-          :class="{selected: $store.ui.has($el.dataset.picPath), cursor: $store.ui.cursorPath === $el.dataset.picPath}">
+          data-pic-path="{{ pic.rel }}">
     <img class="w-full h-full object-cover" loading="lazy" decoding="async" alt="{{ pic.name }}"
          src="/image?library={{ library | urlencode }}&path={{ pic.rel | urlencode }}&size=thumb"
          onerror="fotilPicError(this)">
