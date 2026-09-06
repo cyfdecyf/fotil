@@ -33,6 +33,42 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Alpine: hide x-cloak'd elements until Alpine initializes. */
+[x-cloak] {
+  display: none !important;
+}
+
+/* Dialog/lightbox/toast entrances. */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.ios-dialog[open] {
+  animation: dialog-in 0.18s ease-out;
+}
+.ios-dialog[open]::backdrop {
+  animation: fade-in 0.18s ease-out;
+}
+#lightbox[open] {
+  animation: fade-in 0.15s ease-out;
+}
+#cleanup-result > * {
+  animation: toast-in 0.22s ease-out;
+}
+
 /* Capsule buttons. */
 .btn {
   border: none;
@@ -282,7 +318,17 @@ a.crumb:hover {
   color: var(--accent);
 }
 
-/* Photo cards: cursor = accent ring, hover = hairline, selected = red. */
+/* Photo cards: cursor = accent ring, hover = hairline, selected = red.
+   Transparent resting outline/shadow keep the ring geometry constant so
+   cursor/selected changes animate as a color transition. */
+.photo-card {
+  box-shadow: 0 0 0 2px transparent;
+  outline: 3px solid transparent;
+  outline-offset: -3px;
+  transition:
+    box-shadow 0.15s,
+    outline-color 0.15s;
+}
 /* Grid cursor: outer accent halo, visible alongside the selected ring. */
 .photo-card.cursor {
   box-shadow: 0 0 0 2px var(--accent);
@@ -296,14 +342,15 @@ a.crumb:hover {
   outline-offset: -2px;
 }
 .photo-card.selected {
-  outline: 3px solid var(--danger);
-  outline-offset: -3px;
+  outline-color: var(--danger);
 }
 .photo-card .pick-badge {
-  display: none;
+  display: flex;
+  opacity: 0;
+  transition: opacity 0.15s;
 }
 .photo-card.selected .pick-badge {
-  display: flex;
+  opacity: 1;
 }
 
 /* Rounded grouped dialogs, iOS alert style. */
