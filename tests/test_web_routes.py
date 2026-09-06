@@ -195,5 +195,5 @@ def test_cleanup_reports_skipped(client):
 
 
 def test_static_assets_served(client):
-    for asset in ('app.js', 'app.css', 'htmx.min.js', 'tailwind.js'):
+    for asset in ('app.js', 'app.css', 'htmx.min.js', 'tailwind.js', 'alpine.min.js'):
         assert client.get(f'/static/{asset}').status_code == 200, asset

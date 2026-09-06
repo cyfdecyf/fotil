@@ -8,6 +8,7 @@
     {{ chevron_right('chev chev-r') }}{{ chevron_down('chev chev-d') }}
   </span>
   <a class="tree-link" data-dir="{{ child }}" title="{{ child }}"
+     :class="{'active': $store.ui.dir === $el.dataset.dir}"
      hx-get="/grid?library={{ library | urlencode }}&dir={{ child | urlencode }}&offset=0"
      hx-target="#main" hx-swap="innerHTML">
     {{ folder('tree-ico') }}<span class="tree-name">{{ node.name }}</span>

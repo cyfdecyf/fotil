@@ -1,29 +1,69 @@
 (() => {
   'use strict';
 
-  // Current library/dir/mode, kept in sync from the grid partial's data
-  // attrs and the header toggle.
-  const state = { library: '', dir: '', selectMode: false };
-  // Selected pic paths relative to pic_dir; survives pagination and
-  // directory navigation, cleared after a cleanup.
-  const selected = new Set();
-  // Grid cursor: the picture keyboard ops (d/u, arrows, space) act on.
-  // Follows the mouse hover and moves with the arrow keys.
-  let cursorPath = null;
-  // Lightbox position within the currently loaded card list.
-  let lightboxIndex = 0;
-  // Lightbox 1:1 zoom state, reset on every picture change.
-  let zoomed = false;
+  // Reactive UI state lives in the Alpine store `ui` (registered below):
+  // templates bind to it and repaint themselves. This file keeps only the
+  // imperative behaviour — keyboard dispatch, navigation math, dialog
+  // plumbing and the htmx glue — and mutates the store instead of writing
+  // state to the DOM by hand.
 
   const $ = (sel) => document.querySelector(sel);
-
-  const picUrl = (path) =>
-    `/image?library=${encodeURIComponent(state.library)}&path=${encodeURIComponent(path)}`;
 
   const gridPaths = () =>
     Array.from(document.querySelectorAll('.photo-card')).map((c) => c.dataset.picPath);
 
   const hasMore = () => !!document.getElementById('load-more');
+
+  // Registered on `alpine:init`; app.js loads before alpine.min.js (both
+  // deferred) so the listener is in place before Alpine boots. Seeding
+  // library/dir here (rather than in boot) means the tree-link and card
+  // bindings are already correct on first paint.
+  document.addEventListener('alpine:init', () => {
+    Alpine.store('ui', {
+      library: '',
+      dir: '',
+      selectMode: false,
+      // Selected pic paths relative to pic_dir; survives pagination and
+      // directory navigation, cleared after a cleanup.
+      selected: new Set(),
+      // Grid cursor: the picture keyboard ops (d/u, arrows, space) act on.
+      // Follows the mouse hover and moves with the arrow keys.
+      cursorPath: null,
+      // Lightbox: current picture path and its index in the loaded card
+      // list. The 1:1 zoom stays imperative (see setZoom).
+      lbPath: null,
+      lbIndex: 0,
+
+      has(p) {
+        return p != null && this.selected.has(p);
+      },
+      unmark(p) {
+        this.selected.delete(p);
+      },
+      picUrl(p) {
+        return `/image?library=${encodeURIComponent(this.library)}&path=${encodeURIComponent(p)}`;
+      },
+      // The next three read the live DOM for totals; they re-evaluate when
+      // lbIndex changes, which covers every path that swaps grid content.
+      lbPos() {
+        return `${this.lbIndex + 1} / ${gridPaths().length}${hasMore() ? '+' : ''}`;
+      },
+      lbAtStart() {
+        return this.lbIndex <= 0;
+      },
+      lbAtEnd() {
+        return this.lbIndex >= gridPaths().length - 1 && !hasMore();
+      },
+    });
+    const grid = $('#grid-root');
+    if (grid) {
+      const st = Alpine.store('ui');
+      st.library = grid.dataset.library;
+      st.dir = grid.dataset.dir;
+    }
+  });
+
+  const ui = () => Alpine.store('ui');
 
   // ---- Theme --------------------------------------------------------------
 
@@ -41,15 +81,14 @@
 
   // ---- Grid cursor --------------------------------------------------------
 
+  // The cursor ring itself is a template binding on cursorPath; this only
+  // updates the store and scrolls the card into view when keys moved it.
   function setCursor(path, { scroll = true } = {}) {
-    cursorPath = path;
-    document.querySelectorAll('.photo-card').forEach((card) => {
-      const on = card.dataset.picPath === path;
-      card.classList.toggle('cursor', on);
-      if (on && scroll) {
-        card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-      }
-    });
+    ui().cursorPath = path;
+    if (path && scroll) {
+      const card = document.querySelector(`.photo-card[data-pic-path="${CSS.escape(path)}"]`);
+      card?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
   }
 
   function gridColumns() {
@@ -73,7 +112,7 @@
   async function navGrid(delta) {
     let paths = gridPaths();
     if (paths.length === 0) return;
-    let idx = paths.indexOf(cursorPath);
+    let idx = paths.indexOf(ui().cursorPath);
     if (idx === -1) {
       idx = delta < 0 ? paths.length - 1 : 0;
       setCursor(paths[idx]);
@@ -112,63 +151,9 @@
 
   // ---- Lightbox -----------------------------------------------------------
 
-  // Close and land the grid cursor on the picture that was last viewed.
-  // The dialog `close` event is unreliable in some WebViews, so every close
-  // path goes through here.
-  function closeLightbox() {
-    const path = gridPaths()[lightboxIndex];
-    if (path) setCursor(path);
-    setZoom(false);
-    const dlg = $('#lightbox');
-    if (dlg.open) dlg.close();
-  }
-
-  function openLightbox(path) {
-    const paths = gridPaths();
-    lightboxIndex = Math.max(paths.indexOf(path), 0);
-    updateLightbox();
-    $('#lightbox').showModal();
-  }
-
-  async function navLightbox(delta) {
-    let paths = gridPaths();
-    if (delta > 0 && lightboxIndex + delta >= paths.length && hasMore()) {
-      await loadMore();
-      paths = gridPaths();
-    }
-    const idx = Math.max(0, Math.min(lightboxIndex + delta, paths.length - 1));
-    lightboxIndex = idx;
-    updateLightbox();
-  }
-
-  function updateLightbox() {
-    const paths = gridPaths();
-    const path = paths[lightboxIndex];
-    if (!path) return;
-    const img = $('#lightbox-img');
-    if (img.dataset.path !== path) {
-      img.dataset.path = path;
-      img.src = picUrl(path);
-    }
-    setZoom(false);
-    $('#lightbox-name').textContent = path.split('/').pop();
-    $('#lightbox-pos').textContent =
-      `${lightboxIndex + 1} / ${paths.length}${hasMore() ? '+' : ''}`;
-    $('#lightbox-prev').disabled = lightboxIndex <= 0;
-    $('#lightbox-next').disabled = lightboxIndex >= paths.length - 1 && !hasMore();
-    updateLightboxMark();
-    // Preload neighbours so flipping through feels instant.
-    for (const i of [lightboxIndex - 1, lightboxIndex + 1]) {
-      if (paths[i]) {
-        new Image().src = picUrl(paths[i]);
-      }
-    }
-  }
-
-  function updateLightboxMark() {
-    const path = $('#lightbox-img').dataset.path;
-    $('#lightbox-marked').classList.toggle('hidden', !selected.has(path));
-  }
+  // Lightbox 1:1 zoom stays imperative: the scroll re-centering must run
+  // right after the .zoomed layout change, and nothing else observes it.
+  let zoomed = false;
 
   function setZoom(on) {
     zoomed = on;
@@ -181,32 +166,54 @@
     }
   }
 
-  // ---- Selection ----------------------------------------------------------
-
-  function updateSelectedUI() {
-    $('#selected-count').textContent = selected.size;
-
-    const holder = $('#cleanup-pics-inputs');
-    holder.textContent = '';
-    for (const p of selected) {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'pics';
-      input.value = p;
-      holder.appendChild(input);
-    }
-
-    $('#cleanup-count').textContent = selected.size;
-    $('#cleanup-button').disabled = selected.size === 0;
-
-    document.querySelectorAll('[data-pic-path]').forEach((card) => {
-      card.classList.toggle('selected', selected.has(card.dataset.picPath));
-    });
-
-    if ($('#selected-dialog').open) {
-      renderSelectedPanel();
+  // Point the lightbox at a path: store updates drive the template
+  // bindings (image src, name, counter, prev/next, mark badge); only the
+  // zoom reset and neighbour preloading stay imperative.
+  function showInLightbox(path) {
+    if (!path) return;
+    ui().lbPath = path;
+    setZoom(false);
+    // Preload neighbours so flipping through feels instant.
+    const paths = gridPaths();
+    const idx = paths.indexOf(path);
+    for (const i of [idx - 1, idx + 1]) {
+      if (paths[i]) {
+        new Image().src = ui().picUrl(paths[i]);
+      }
     }
   }
+
+  function openLightbox(path) {
+    const paths = gridPaths();
+    ui().lbIndex = Math.max(paths.indexOf(path), 0);
+    showInLightbox(path);
+    $('#lightbox').showModal();
+  }
+
+  async function navLightbox(delta) {
+    const st = ui();
+    let paths = gridPaths();
+    if (delta > 0 && st.lbIndex + delta >= paths.length && hasMore()) {
+      await loadMore();
+      paths = gridPaths();
+    }
+    const idx = Math.max(0, Math.min(st.lbIndex + delta, paths.length - 1));
+    st.lbIndex = idx;
+    showInLightbox(paths[idx]);
+  }
+
+  // Close and land the grid cursor on the picture that was last viewed.
+  // The dialog `close` event is unreliable in some WebViews, so every close
+  // path goes through here.
+  function closeLightbox() {
+    const path = gridPaths()[ui().lbIndex];
+    if (path) setCursor(path);
+    setZoom(false);
+    const dlg = $('#lightbox');
+    if (dlg.open) dlg.close();
+  }
+
+  // ---- Selection ----------------------------------------------------------
 
   function applyMark(path, mark) {
     if (!path) return;
@@ -216,62 +223,24 @@
       return;
     }
     if (mark) {
-      selected.add(path);
+      ui().selected.add(path);
     } else {
-      selected.delete(path);
-    }
-    updateSelectedUI();
-    if ($('#lightbox').open) {
-      updateLightboxMark();
+      ui().selected.delete(path);
     }
   }
 
   // Select every loaded picture, or clear the selection if all are selected.
   function toggleSelectAll() {
+    const st = ui();
     const paths = gridPaths();
     if (paths.length === 0) return;
-    const allSelected = paths.every((p) => selected.has(p));
+    const allSelected = paths.every((p) => st.selected.has(p));
     for (const p of paths) {
       if (allSelected) {
-        selected.delete(p);
+        st.selected.delete(p);
       } else {
-        selected.add(p);
+        st.selected.add(p);
       }
-    }
-    updateSelectedUI();
-  }
-
-  function setSelectMode(on) {
-    state.selectMode = on;
-    $('#select-mode-button').classList.toggle('tinted', on);
-    $('#select-mode-button').setAttribute('aria-pressed', String(on));
-  }
-
-  function renderSelectedPanel() {
-    const box = $('#selected-items');
-    box.textContent = '';
-    for (const p of selected) {
-      const item = document.createElement('div');
-      item.className = 'relative';
-
-      const img = document.createElement('img');
-      img.src = picUrl(p);
-      img.className = 'w-full h-24 object-cover rounded';
-      img.loading = 'lazy';
-
-      const label = document.createElement('div');
-      label.className = 'text-xs truncate mt-1';
-      label.textContent = p.split('/').pop();
-
-      const btn = document.createElement('button');
-      btn.className =
-        'absolute top-0 right-0 bg-[var(--danger)] text-white text-xs rounded-full w-5 h-5';
-      btn.textContent = '×';
-      btn.dataset.picPath = p;
-      btn.dataset.unselect = '1';
-
-      item.append(img, label, btn);
-      box.appendChild(item);
     }
   }
 
@@ -287,17 +256,12 @@
       $('#cleanup-result').textContent = '';
       return;
     }
-    const unselect = e.target.closest('[data-unselect]');
-    if (unselect) {
-      selected.delete(unselect.dataset.picPath);
-      updateSelectedUI();
-      return;
-    }
     const card = e.target.closest('.photo-card');
     if (card) {
+      const st = ui();
       const path = card.dataset.picPath;
-      if (state.selectMode) {
-        applyMark(path, !selected.has(path));
+      if (st.selectMode) {
+        applyMark(path, !st.has(path));
       } else {
         setCursor(path, { scroll: false });
         openLightbox(path);
@@ -308,7 +272,7 @@
   // Mouse hover moves the grid cursor, so keyboard ops follow the mouse.
   document.addEventListener('mouseover', (e) => {
     const card = e.target.closest ? e.target.closest('.photo-card') : null;
-    if (card && card.dataset.picPath !== cursorPath) {
+    if (card && card.dataset.picPath !== ui().cursorPath) {
       setCursor(card.dataset.picPath, { scroll: false });
     }
   });
@@ -358,12 +322,13 @@
     const lightboxOpen = $('#lightbox').open;
 
     if (e.key === 'd' || e.key === 'u') {
-      const path = lightboxOpen ? $('#lightbox-img').dataset.path : cursorPath;
+      const st = ui();
+      const path = lightboxOpen ? st.lbPath : st.cursorPath;
       applyMark(path, e.key === 'd');
       return;
     }
     if (e.key === 's') {
-      setSelectMode(!state.selectMode);
+      ui().selectMode = !ui().selectMode;
       return;
     }
     if (e.key === '?') {
@@ -377,7 +342,7 @@
       else if (e.key === 'PageDown') navLightbox(pageDelta());
       else if (e.key === 'PageUp') navLightbox(-pageDelta());
       else if (e.key === 'End') navLightbox(gridPaths().length);
-      else if (e.key === 'Home') navLightbox(-lightboxIndex);
+      else if (e.key === 'Home') navLightbox(-ui().lbIndex);
       // Up/down only move the grid cursor, so context is kept for the
       // return to the grid; left/right switch pictures.
       else if (e.key === 'ArrowDown') navGrid(gridColumns());
@@ -397,8 +362,8 @@
     else if (e.key === 'End') navGrid(gridPaths().length);
     else if (e.key === 'Home') navGrid(-gridPaths().length);
     else if (e.key === ' ' || e.key === 'Enter') {
-      if (!cursorPath && gridPaths().length) setCursor(gridPaths()[0]);
-      if (cursorPath) openLightbox(cursorPath);
+      if (!ui().cursorPath && gridPaths().length) setCursor(gridPaths()[0]);
+      if (ui().cursorPath) openLightbox(ui().cursorPath);
     } else if (e.key === 'a') {
       toggleSelectAll();
     } else if (e.key === 'f') {
@@ -446,21 +411,21 @@
       return;
     }
 
-    // Grid content swapped in: sync state, highlight the tree, restore marks.
+    // Grid content swapped in: pick up the new location. Selected/cursor
+    // styling and the active tree link re-apply themselves through the
+    // Alpine bindings on the fresh nodes; only a vanished cursor needs an
+    // explicit reset.
     const grid = $('#grid-root');
     if (grid) {
-      state.library = grid.dataset.library;
-      state.dir = grid.dataset.dir;
-      document.querySelectorAll('.tree-link').forEach((a) => {
-        a.classList.toggle('active', a.dataset.dir === state.dir);
-      });
-      // Drop the cursor if its picture is gone, otherwise restore the ring.
-      if (cursorPath && !document.querySelector(`.photo-card[data-pic-path="${CSS.escape(cursorPath)}"]`)) {
-        cursorPath = null;
-      } else if (cursorPath) {
-        setCursor(cursorPath, { scroll: false });
+      const st = ui();
+      st.library = grid.dataset.library;
+      st.dir = grid.dataset.dir;
+      if (
+        st.cursorPath &&
+        !document.querySelector(`.photo-card[data-pic-path="${CSS.escape(st.cursorPath)}"]`)
+      ) {
+        st.cursorPath = null;
       }
-      updateSelectedUI();
     }
   });
 
@@ -474,31 +439,24 @@
       e.detail.successful
     ) {
       $('#cleanup-dialog').close();
-      selected.clear();
-      cursorPath = null;
-      updateSelectedUI();
+      const st = ui();
+      st.selected.clear();
+      st.cursorPath = null;
     }
   });
 
   // The cleanup response carries HX-Trigger to refresh the grid, since the
   // trashed files must disappear from it.
   document.body.addEventListener('grid-refresh', () => {
+    const st = ui();
     htmx.ajax(
       'GET',
-      `/grid?library=${encodeURIComponent(state.library)}&dir=${encodeURIComponent(state.dir)}&offset=0`,
+      `/grid?library=${encodeURIComponent(st.library)}&dir=${encodeURIComponent(st.dir)}&offset=0`,
       { target: '#main', swap: 'innerHTML' },
     );
   });
 
   function boot() {
-    const grid = $('#grid-root');
-    if (grid) {
-      state.library = grid.dataset.library;
-      state.dir = grid.dataset.dir;
-      document.querySelectorAll('.tree-link').forEach((a) => {
-        a.classList.toggle('active', a.dataset.dir === state.dir);
-      });
-    }
     $('#library-select').addEventListener('change', (e) => {
       // Full reload so the whole page (tree, grid, trash path) switches.
       const url = new URL(location.href);
@@ -506,16 +464,12 @@
       url.searchParams.delete('dir');
       location.assign(url);
     });
-    $('#select-mode-button').addEventListener('click', () => {
-      setSelectMode(!state.selectMode);
-    });
     $('#selected-button').addEventListener('click', () => {
-      renderSelectedPanel();
       $('#selected-dialog').showModal();
     });
     $('#selected-close').addEventListener('click', () => $('#selected-dialog').close());
     $('#cleanup-button').addEventListener('click', () => {
-      if (selected.size > 0) $('#cleanup-dialog').showModal();
+      if (ui().selected.size > 0) $('#cleanup-dialog').showModal();
     });
     $('#cleanup-cancel').addEventListener('click', () => $('#cleanup-dialog').close());
 
@@ -550,7 +504,7 @@
     lbImg.addEventListener('error', () => {
       lbImg.style.display = 'none';
       const fb = $('#lightbox-fallback');
-      fb.textContent = `${lbImg.dataset.path.split('/').pop()}\n(无法显示)`;
+      fb.textContent = `${(ui().lbPath || '').split('/').pop()}\n(无法显示)`;
       fb.classList.remove('hidden');
     });
     lbImg.addEventListener('load', () => {
@@ -561,7 +515,7 @@
     // safety net for close paths outside the ones handled explicitly.
     $('#lightbox').addEventListener('close', () => {
       setZoom(false);
-      const path = gridPaths()[lightboxIndex];
+      const path = gridPaths()[ui().lbIndex];
       if (path) setCursor(path);
     });
 
@@ -569,8 +523,6 @@
     $('#help-dialog').addEventListener('click', (e) => {
       if (e.target.id === 'help-dialog') $('#help-dialog').close();
     });
-
-    updateSelectedUI();
   }
 
   if (document.readyState === 'loading') {

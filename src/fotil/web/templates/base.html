@@ -14,10 +14,15 @@
   </script>
   <script src="/static/tailwind.js"></script>
   <script src="/static/htmx.min.js" defer></script>
+  <!-- app.js must run before Alpine so its `alpine:init` listener is in
+       place when Alpine boots and registers the UI store. -->
   <script src="/static/app.js" defer></script>
+  <script src="/static/alpine.min.js" defer></script>
   <link rel="stylesheet" href="/static/app.css">
 </head>
-<body class="h-screen flex flex-col bg-[var(--bg)] text-[var(--label)]">
+<!-- One page-wide Alpine scope so store bindings work everywhere, including
+     content swapped in later by htmx. -->
+<body class="h-screen flex flex-col bg-[var(--bg)] text-[var(--label)]" x-data>
   {% block body %}{% endblock %}
 </body>
 </html>

@@ -16,15 +16,20 @@
       <button type="button" data-theme="light">浅色</button>
       <button type="button" data-theme="dark">深色</button>
     </div>
-    <button id="select-mode-button" aria-pressed="false" class="btn">选择模式</button>
-    <button id="selected-button" class="btn">已选 <span id="selected-count" class="font-semibold">0</span></button>
-    <button id="cleanup-button" disabled class="btn btn-danger">cleanup raw</button>
+    <button id="select-mode-button" aria-pressed="false" class="btn"
+            :class="{'tinted': $store.ui.selectMode}"
+            :aria-pressed="$store.ui.selectMode"
+            @click="$store.ui.selectMode = !$store.ui.selectMode">选择模式</button>
+    <button id="selected-button" class="btn">已选 <span class="font-semibold" x-text="$store.ui.selected.size">0</span></button>
+    <button id="cleanup-button" disabled class="btn btn-danger"
+            :disabled="$store.ui.selected.size === 0">cleanup raw</button>
   </div>
 </header>
 
 <div class="flex flex-1 min-h-0">
   <aside class="w-56 shrink-0 border-r border-[var(--separator)] overflow-auto p-2">
     <a class="tree-link" data-dir="" title="根目录"
+       :class="{'active': $store.ui.dir === $el.dataset.dir}"
        hx-get="/grid?library={{ library | urlencode }}&dir=&offset=0"
        hx-target="#main" hx-swap="innerHTML">
       {{ house('tree-ico') }}<span class="tree-name">根目录</span>
@@ -40,14 +45,16 @@
 <dialog id="cleanup-dialog" class="ios-dialog w-[26rem]">
   <h2 class="text-[17px] font-semibold mb-2">确认清理</h2>
   <p class="text-sm mb-2">
-    将 <span id="cleanup-count" class="font-semibold">0</span> 张选中的照片移入
+    将 <span class="font-semibold" x-text="$store.ui.selected.size">0</span> 张选中的照片移入
     <code class="text-xs bg-[var(--fill)] px-1 rounded break-all">{{ trash_dir }}</code>,
     并把 raw 目录下同名的 raw 文件一并移入 trash。
   </p>
   <p class="text-xs text-[var(--secondary)] mb-4">文件只是移动到 trash,不会真正删除,可手工找回。</p>
   <form id="cleanup-form">
     <input type="hidden" name="library" value="{{ library }}">
-    <span id="cleanup-pics-inputs"></span>
+    <template x-for="p in [...$store.ui.selected]" :key="p">
+      <input type="hidden" name="pics" :value="p">
+    </template>
   </form>
   <div class="flex justify-end gap-2">
     <button id="cleanup-cancel" class="btn">取消</button>
@@ -65,25 +72,40 @@
             class="w-7 h-7 rounded-full bg-[var(--fill)] hover:bg-[var(--fill-strong)] text-[var(--secondary)] text-sm leading-none"
             title="关闭">×</button>
   </div>
-  <div id="selected-items" class="grid grid-cols-4 gap-3 overflow-auto max-h-[24rem]"></div>
+  <div id="selected-items" class="grid grid-cols-4 gap-3 overflow-auto max-h-[24rem]">
+    <template x-for="p in [...$store.ui.selected]" :key="p">
+      <div class="relative">
+        <img class="w-full h-24 object-cover rounded" loading="lazy" alt=""
+             :src="$store.ui.picUrl(p)">
+        <div class="text-xs truncate mt-1" x-text="p.split('/').pop()"></div>
+        <button @click="$store.ui.unmark(p)" title="移除"
+                class="absolute top-0 right-0 bg-[var(--danger)] text-white text-xs rounded-full w-5 h-5">×</button>
+      </div>
+    </template>
+  </div>
 </dialog>
 
 <dialog id="lightbox" class="m-0 p-0 w-screen h-screen max-w-none max-h-none bg-black/95 text-white">
   <div class="w-full h-full flex flex-col">
     <header class="flex items-center gap-3 px-4 h-12 shrink-0">
-      <span id="lightbox-name" class="text-sm font-medium truncate"></span>
-      <span id="lightbox-pos" class="text-xs text-white/50 shrink-0"></span>
-      <span id="lightbox-marked" class="hidden text-xs font-semibold bg-[var(--danger)] text-white rounded-full px-2.5 py-1 shrink-0">已标记删除</span>
+      <span id="lightbox-name" class="text-sm font-medium truncate"
+            x-text="$store.ui.lbPath ? $store.ui.lbPath.split('/').pop() : ''"></span>
+      <span id="lightbox-pos" class="text-xs text-white/50 shrink-0" x-text="$store.ui.lbPos()"></span>
+      <span id="lightbox-marked" class="text-xs font-semibold bg-[var(--danger)] text-white rounded-full px-2.5 py-1 shrink-0"
+            x-show="$store.ui.has($store.ui.lbPath)">已标记删除</span>
       <span class="ml-auto text-xs text-white/40 shrink-0 hidden lg:inline">←→ 切换 · 空格 返回 · f 缩放 · d/u 标记 · ? 全部键位</span>
       <button id="lightbox-close" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/80 text-lg leading-none shrink-0" title="关闭 (Esc)">×</button>
     </header>
     <div id="lightbox-stage" class="flex-1 min-h-0 relative">
       <div id="lightbox-scroll" class="w-full h-full overflow-hidden flex items-center justify-center">
-        <img id="lightbox-img" class="max-w-full max-h-full object-contain" alt="">
+        <img id="lightbox-img" class="max-w-full max-h-full object-contain" alt=""
+             :src="$store.ui.lbPath && $store.ui.picUrl($store.ui.lbPath)">
       </div>
       <div id="lightbox-fallback" class="hidden absolute inset-0 flex items-center justify-center text-white/50 whitespace-pre text-center"></div>
-      <button id="lightbox-prev" class="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl leading-none pb-0.5 flex items-center justify-center" title="上一张 (←)">‹</button>
-      <button id="lightbox-next" class="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl leading-none pb-0.5 flex items-center justify-center" title="下一张 (→)">›</button>
+      <button id="lightbox-prev" class="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl leading-none pb-0.5 flex items-center justify-center"
+              :disabled="$store.ui.lbAtStart()" title="上一张 (←)">‹</button>
+      <button id="lightbox-next" class="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl leading-none pb-0.5 flex items-center justify-center"
+              :disabled="$store.ui.lbAtEnd()" title="下一张 (→)">›</button>
     </div>
   </div>
 </dialog>
