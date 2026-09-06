@@ -10,12 +10,9 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import pillow_heif
-
-from PIL import Image, ImageOps
-
 from fotil.config import Config, LibraryConfig
 from fotil.fs import iter_directory_files
+from fotil.web.transcode import TranscodeError, transcode
 
 
 # Suffixes the browser renders directly.
@@ -33,8 +30,6 @@ CACHE_DIR = Path('~/.cache/fotil/web').expanduser()
 # Photos per grid chunk.
 PAGE_SIZE = 200
 
-pillow_heif.register_heif_opener()
-
 
 class InvalidPathError(ValueError):
     """A user supplied path escaped the directory it must stay within."""
@@ -42,10 +37,6 @@ class InvalidPathError(ValueError):
 
 class UnknownLibraryError(ValueError):
     """The requested library name is not in the config."""
-
-
-class TranscodeError(Exception):
-    """A HEIF image could not be transcoded for display."""
 
 
 def get_library(conf: Config, name: str | None) -> LibraryConfig:
@@ -160,8 +151,12 @@ def transcode_cache_path(src: Path) -> Path:
     return CACHE_DIR / f'{key}.jpg'
 
 
-def ensure_transcode(src: Path) -> Path:
+def ensure_transcode(src: Path, *, size_check: bool = False) -> Path:
     """Transcode a HEIF image to a cached JPEG preview and return its path.
+
+    Args:
+        size_check: shrink only images larger than TRANSCODE_MAX_SIZE, see
+            transcode.transcode().
 
     Raises:
         TranscodeError: If the image cannot be decoded or written.
@@ -172,19 +167,18 @@ def ensure_transcode(src: Path) -> Path:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     tmp = dst.with_name(f'.{dst.stem}.{id(dst)}.tmp')
     try:
-        with Image.open(src) as im:
-            im = ImageOps.exif_transpose(im)
-            im.thumbnail(TRANSCODE_MAX_SIZE)
-            im.convert('RGB').save(tmp, 'JPEG', quality=TRANSCODE_QUALITY)
+        transcode(src, tmp, TRANSCODE_MAX_SIZE, TRANSCODE_QUALITY, size_check=size_check)
         tmp.replace(dst)
-    except Exception as exc:
-        raise TranscodeError(f'failed to transcode {src}: {exc}') from exc
+    except OSError as exc:
+        raise TranscodeError(f'failed to write {dst}: {exc}') from exc
     finally:
         tmp.unlink(missing_ok=True)
     return dst
 
 
-def image_file(lib_conf: LibraryConfig, path_rel: str) -> tuple[Path, str]:
+def image_file(
+    lib_conf: LibraryConfig, path_rel: str, *, size_check: bool = False
+) -> tuple[Path, str]:
     """File to serve for a picture and its media type.
 
     Browser-renderable files are served as-is, HEIF files are transcoded to
@@ -196,7 +190,7 @@ def image_file(lib_conf: LibraryConfig, path_rel: str) -> tuple[Path, str]:
     if media_type is not None:
         return src, media_type
     if src.suffix.lower() in TRANSCODE_SUFFIXES:
-        return ensure_transcode(src), 'image/jpeg'
+        return ensure_transcode(src, size_check=size_check), 'image/jpeg'
     return src, 'application/octet-stream'
 
 

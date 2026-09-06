@@ -55,6 +55,17 @@ by moving files back by hand.
 
 HEIF/HIF pictures (Sony camera format) are transcoded to cached JPEG
 previews under `~/.cache/fotil/web` for display; originals stay untouched.
+On macOS the `sips` backend (ImageIO, hardware HEVC decode) is used when
+available, with Pillow as the per-file fallback; set `FOTIL_TRANSCODER`
+to `sips` or `pillow` to force a backend. The optional config section
+
+```toml
+[web]
+sips_size_check = true # default false: always shrink to the preview cap
+```
+
+makes sips check image sizes first and leave pictures already within the
+2560px preview cap untouched, matching Pillow's never-upscale behavior.
 The UI follows the system light/dark theme; the 自动/浅色/深色 control in
 the toolbar overrides it (stored in the browser).
 

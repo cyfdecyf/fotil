@@ -151,6 +151,23 @@ def test_image_transcodes_hif(client):
     assert resp.content[:2] == b'\xff\xd8'  # JPEG magic, not HEIF
 
 
+def test_image_size_check_from_web_config(tmp_path, monkeypatch):
+    """web.sips_size_check reaches the transcode: a small HEIF keeps size."""
+    monkeypatch.setattr(service, 'CACHE_DIR', tmp_path / 'cache')
+    pic = tmp_path / 'pic'
+    write_hif(pic / '2024/05-01/b.hif')
+    conf = tmp_path / 'fotil.toml'
+    conf.write_text(
+        CONFIG_TEMPLATE.format(pic=pic, raw=tmp_path / 'raw', trash=tmp_path / 'trash')
+        + '\n[web]\nsips_size_check = true\n'
+    )
+    with TestClient(app=create_app(conf)) as client:
+        resp = client.get('/image?path=2024/05-01/b.hif')
+    assert resp.status_code == 200
+    with Image.open(io.BytesIO(resp.content)) as im:
+        assert im.size == (8, 6)
+
+
 def test_image_rejects_escape_and_missing(client):
     assert client.get('/image?path=../outside.jpg').status_code == 400
     assert client.get('/image?path=2024/05-01/gone.jpg').status_code == 404

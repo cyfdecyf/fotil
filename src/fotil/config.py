@@ -83,11 +83,27 @@ class GeotagConfig(Struct):
     tag_file: str = 'tag.jpg'
 
 
+class WebConfig(Struct):
+    """
+    Web UI settings.
+
+    Attributes:
+        sips_size_check: probe the image size before sips transcoding and
+            shrink only images already larger than the preview cap, matching
+            Pillow's never-upscale thumbnail behavior. Off by default: camera
+            originals are always larger than the cap, so the unconditional
+            shrink saves the probe.
+    """
+
+    sips_size_check: bool = False
+
+
 class Config(Struct):
     default_library: str
     library: dict[str, LibraryConfig]
     importer: dict[str, ImportConfig]
     geotag: GeotagConfig = field(default_factory=GeotagConfig)
+    web: WebConfig = field(default_factory=WebConfig)
 
 
 def load_config(fname: Path | str) -> Config:

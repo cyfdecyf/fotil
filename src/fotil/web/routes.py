@@ -115,9 +115,11 @@ def image(
     request: Request, library: FromQuery[str | None] = None, path: FromQuery[str] = ''
 ) -> File:
     """Serve a picture, transcoding HEIF files to cached JPEG previews."""
-    _, lib_conf = _library(request, library)
+    conf, lib_conf = _library(request, library)
     try:
-        src, media_type = service.image_file(lib_conf, path)
+        src, media_type = service.image_file(
+            lib_conf, path, size_check=conf.web.sips_size_check
+        )
     except InvalidPathError as exc:
         raise BadRequest(str(exc)) from exc
     except FileNotFoundError as exc:
