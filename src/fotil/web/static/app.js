@@ -7,10 +7,13 @@
   // Selected pic paths relative to pic_dir; survives pagination and
   // directory navigation, cleared after a cleanup.
   const selected = new Set();
-  // Picture currently under the mouse cursor; the grid d/u keys apply to it.
-  let hoveredPath = null;
+  // Grid cursor: the picture keyboard ops (d/u, arrows, space) act on.
+  // Follows the mouse hover and moves with the arrow keys.
+  let cursorPath = null;
   // Lightbox position within the currently loaded card list.
   let lightboxIndex = 0;
+  // Lightbox 1:1 zoom state, reset on every picture change.
+  let zoomed = false;
 
   const $ = (sel) => document.querySelector(sel);
 
@@ -36,6 +39,150 @@
     });
   }
 
+  // ---- Grid cursor --------------------------------------------------------
+
+  function setCursor(path, { scroll = true } = {}) {
+    cursorPath = path;
+    document.querySelectorAll('.photo-card').forEach((card) => {
+      const on = card.dataset.picPath === path;
+      card.classList.toggle('cursor', on);
+      if (on && scroll) {
+        card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    });
+  }
+
+  function gridColumns() {
+    const grid = document.getElementById('photo-grid');
+    if (!grid) return 1;
+    return getComputedStyle(grid).gridTemplateColumns.split(' ').length || 1;
+  }
+
+  // One screen of pictures: visible rows times columns.
+  function pageDelta() {
+    const cols = gridColumns();
+    const card = document.querySelector('.photo-card');
+    const main = document.getElementById('main');
+    if (!card || !main) return cols;
+    const rowHeight = card.getBoundingClientRect().height + 12;
+    return cols * Math.max(1, Math.floor(main.clientHeight / rowHeight));
+  }
+
+  // Move the cursor by delta pictures, pulling in the next chunk when the
+  // movement crosses the loaded end.
+  async function navGrid(delta) {
+    let paths = gridPaths();
+    if (paths.length === 0) return;
+    let idx = paths.indexOf(cursorPath);
+    if (idx === -1) {
+      idx = delta < 0 ? paths.length - 1 : 0;
+      setCursor(paths[idx]);
+      return;
+    }
+    let target = idx + delta;
+    if (target >= paths.length && hasMore()) {
+      await loadMore();
+      paths = gridPaths();
+    }
+    target = Math.max(0, Math.min(target, paths.length - 1));
+    setCursor(paths[target]);
+  }
+
+  // Click the load-more button and resolve once new cards joined the grid.
+  function loadMore() {
+    return new Promise((resolve) => {
+      const btn = document.getElementById('load-more');
+      if (!btn) return resolve();
+      const before = document.querySelectorAll('.photo-card').length;
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        document.body.removeEventListener('htmx:afterSwap', onSwap);
+        resolve();
+      };
+      const onSwap = () => {
+        if (document.querySelectorAll('.photo-card').length > before) finish();
+      };
+      document.body.addEventListener('htmx:afterSwap', onSwap);
+      setTimeout(finish, 5000);
+      btn.click();
+    });
+  }
+
+  // ---- Lightbox -----------------------------------------------------------
+
+  // Close and land the grid cursor on the picture that was last viewed.
+  // The dialog `close` event is unreliable in some WebViews, so every close
+  // path goes through here.
+  function closeLightbox() {
+    const path = gridPaths()[lightboxIndex];
+    if (path) setCursor(path);
+    setZoom(false);
+    const dlg = $('#lightbox');
+    if (dlg.open) dlg.close();
+  }
+
+  function openLightbox(path) {
+    const paths = gridPaths();
+    lightboxIndex = Math.max(paths.indexOf(path), 0);
+    updateLightbox();
+    $('#lightbox').showModal();
+  }
+
+  async function navLightbox(delta) {
+    let paths = gridPaths();
+    if (delta > 0 && lightboxIndex + delta >= paths.length && hasMore()) {
+      await loadMore();
+      paths = gridPaths();
+    }
+    const idx = Math.max(0, Math.min(lightboxIndex + delta, paths.length - 1));
+    lightboxIndex = idx;
+    updateLightbox();
+  }
+
+  function updateLightbox() {
+    const paths = gridPaths();
+    const path = paths[lightboxIndex];
+    if (!path) return;
+    const img = $('#lightbox-img');
+    if (img.dataset.path !== path) {
+      img.dataset.path = path;
+      img.src = picUrl(path);
+    }
+    setZoom(false);
+    $('#lightbox-name').textContent = path.split('/').pop();
+    $('#lightbox-pos').textContent =
+      `${lightboxIndex + 1} / ${paths.length}${hasMore() ? '+' : ''}`;
+    $('#lightbox-prev').disabled = lightboxIndex <= 0;
+    $('#lightbox-next').disabled = lightboxIndex >= paths.length - 1 && !hasMore();
+    updateLightboxMark();
+    // Preload neighbours so flipping through feels instant.
+    for (const i of [lightboxIndex - 1, lightboxIndex + 1]) {
+      if (paths[i]) {
+        new Image().src = picUrl(paths[i]);
+      }
+    }
+  }
+
+  function updateLightboxMark() {
+    const path = $('#lightbox-img').dataset.path;
+    $('#lightbox-marked').classList.toggle('hidden', !selected.has(path));
+  }
+
+  function setZoom(on) {
+    zoomed = on;
+    $('#lightbox-stage').classList.toggle('zoomed', on);
+    if (on) {
+      // Start centered on the picture.
+      const sc = $('#lightbox-scroll');
+      sc.scrollTop = (sc.scrollHeight - sc.clientHeight) / 2;
+      sc.scrollLeft = (sc.scrollWidth - sc.clientWidth) / 2;
+    }
+  }
+
+  // ---- Selection ----------------------------------------------------------
+
   function updateSelectedUI() {
     $('#selected-count').textContent = selected.size;
 
@@ -59,6 +206,45 @@
     if ($('#selected-dialog').open) {
       renderSelectedPanel();
     }
+  }
+
+  function applyMark(path, mark) {
+    if (!path) return;
+    // Ignore stale paths whose card no longer exists (e.g. after the grid
+    // refresh following a cleanup).
+    if (!document.querySelector(`.photo-card[data-pic-path="${CSS.escape(path)}"]`)) {
+      return;
+    }
+    if (mark) {
+      selected.add(path);
+    } else {
+      selected.delete(path);
+    }
+    updateSelectedUI();
+    if ($('#lightbox').open) {
+      updateLightboxMark();
+    }
+  }
+
+  // Select every loaded picture, or clear the selection if all are selected.
+  function toggleSelectAll() {
+    const paths = gridPaths();
+    if (paths.length === 0) return;
+    const allSelected = paths.every((p) => selected.has(p));
+    for (const p of paths) {
+      if (allSelected) {
+        selected.delete(p);
+      } else {
+        selected.add(p);
+      }
+    }
+    updateSelectedUI();
+  }
+
+  function setSelectMode(on) {
+    state.selectMode = on;
+    $('#select-mode-button').classList.toggle('tinted', on);
+    $('#select-mode-button').setAttribute('aria-pressed', String(on));
   }
 
   function renderSelectedPanel() {
@@ -89,100 +275,14 @@
     }
   }
 
-  function applyMark(path, mark) {
-    if (!path) return;
-    // Ignore stale paths whose card no longer exists (e.g. after the grid
-    // refresh following a cleanup).
-    if (!document.querySelector(`.photo-card[data-pic-path="${CSS.escape(path)}"]`)) {
-      return;
-    }
-    if (mark) {
-      selected.add(path);
-    } else {
-      selected.delete(path);
-    }
-    updateSelectedUI();
-    if ($('#lightbox').open) {
-      updateLightboxMark();
-    }
-  }
-
-  // ---- Lightbox -----------------------------------------------------------
-
-  function openLightbox(path) {
-    const paths = gridPaths();
-    lightboxIndex = Math.max(paths.indexOf(path), 0);
-    updateLightbox();
-    $('#lightbox').showModal();
-  }
-
-  async function navLightbox(delta) {
-    let paths = gridPaths();
-    // Past the last loaded picture: pull in the next chunk and continue.
-    if (lightboxIndex + delta >= paths.length && delta > 0 && hasMore()) {
-      await loadMore();
-      paths = gridPaths();
-    }
-    const idx = lightboxIndex + delta;
-    if (idx < 0 || idx >= paths.length) return;
-    lightboxIndex = idx;
-    updateLightbox();
-  }
-
-  function updateLightbox() {
-    const paths = gridPaths();
-    const path = paths[lightboxIndex];
-    if (!path) return;
-    const img = $('#lightbox-img');
-    if (img.dataset.path !== path) {
-      img.dataset.path = path;
-      img.src = picUrl(path);
-    }
-    $('#lightbox-name').textContent = path.split('/').pop();
-    $('#lightbox-pos').textContent =
-      `${lightboxIndex + 1} / ${paths.length}${hasMore() ? '+' : ''}`;
-    $('#lightbox-prev').disabled = lightboxIndex <= 0;
-    $('#lightbox-next').disabled = lightboxIndex >= paths.length - 1 && !hasMore();
-    updateLightboxMark();
-    // Preload neighbours so flipping through feels instant.
-    for (const i of [lightboxIndex - 1, lightboxIndex + 1]) {
-      if (paths[i]) {
-        new Image().src = picUrl(paths[i]);
-      }
-    }
-  }
-
-  function updateLightboxMark() {
-    const path = $('#lightbox-img').dataset.path;
-    $('#lightbox-marked').classList.toggle('hidden', !selected.has(path));
-  }
-
-  // Click the load-more button and resolve once new cards joined the grid.
-  function loadMore() {
-    return new Promise((resolve) => {
-      const btn = document.getElementById('load-more');
-      if (!btn) return resolve();
-      const before = document.querySelectorAll('.photo-card').length;
-      let done = false;
-      const finish = () => {
-        if (done) return;
-        done = true;
-        document.body.removeEventListener('htmx:afterSwap', onSwap);
-        resolve();
-      };
-      const onSwap = () => {
-        if (document.querySelectorAll('.photo-card').length > before) finish();
-      };
-      document.body.addEventListener('htmx:afterSwap', onSwap);
-      setTimeout(finish, 5000);
-      btn.click();
-    });
-  }
-
   // ---- Events -------------------------------------------------------------
 
   // Click delegation so cards added by later grid chunks work too.
   document.addEventListener('click', (e) => {
+    if (e.target.closest('#help-button')) {
+      $('#help-dialog').showModal();
+      return;
+    }
     if (e.target.closest('[data-close-result]')) {
       $('#cleanup-result').textContent = '';
       return;
@@ -199,16 +299,39 @@
       if (state.selectMode) {
         applyMark(path, !selected.has(path));
       } else {
+        setCursor(path, { scroll: false });
         openLightbox(path);
       }
     }
   });
 
-  // Track the picture under the cursor for the grid d/u shortcuts.
+  // Mouse hover moves the grid cursor, so keyboard ops follow the mouse.
   document.addEventListener('mouseover', (e) => {
     const card = e.target.closest ? e.target.closest('.photo-card') : null;
-    hoveredPath = card ? card.dataset.picPath : null;
+    if (card && card.dataset.picPath !== cursorPath) {
+      setCursor(card.dataset.picPath, { scroll: false });
+    }
   });
+
+  const NAV_KEYS = [
+    'ArrowLeft',
+    'ArrowRight',
+    'ArrowUp',
+    'ArrowDown',
+    'Home',
+    'End',
+    'PageUp',
+    'PageDown',
+    ' ',
+    'Enter',
+    'd',
+    'u',
+    'a',
+    's',
+    'f',
+    'Escape',
+    '?',
+  ];
 
   document.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -222,21 +345,64 @@
       return;
     }
     if ($('#cleanup-dialog').open) return;
+    // '?' toggles the cheat sheet even while it is open.
+    if ($('#help-dialog').open) {
+      if (e.key === '?') {
+        e.preventDefault();
+        $('#help-dialog').close();
+      }
+      return; // Esc closes natively.
+    }
+    if (!NAV_KEYS.includes(e.key)) return;
+    e.preventDefault();
     const lightboxOpen = $('#lightbox').open;
 
     if (e.key === 'd' || e.key === 'u') {
-      e.preventDefault();
-      if (lightboxOpen) {
-        applyMark($('#lightbox-img').dataset.path, e.key === 'd');
-      } else {
-        applyMark(hoveredPath, e.key === 'd');
-      }
-    } else if (lightboxOpen && e.key === 'ArrowRight') {
-      e.preventDefault();
-      navLightbox(1);
-    } else if (lightboxOpen && e.key === 'ArrowLeft') {
-      e.preventDefault();
-      navLightbox(-1);
+      const path = lightboxOpen ? $('#lightbox-img').dataset.path : cursorPath;
+      applyMark(path, e.key === 'd');
+      return;
+    }
+    if (e.key === 's') {
+      setSelectMode(!state.selectMode);
+      return;
+    }
+    if (e.key === '?') {
+      $('#help-dialog').showModal();
+      return;
+    }
+
+    if (lightboxOpen) {
+      if (e.key === 'ArrowRight') navLightbox(1);
+      else if (e.key === 'ArrowLeft') navLightbox(-1);
+      else if (e.key === 'PageDown') navLightbox(pageDelta());
+      else if (e.key === 'PageUp') navLightbox(-pageDelta());
+      else if (e.key === 'End') navLightbox(gridPaths().length);
+      else if (e.key === 'Home') navLightbox(-lightboxIndex);
+      // Up/down only move the grid cursor, so context is kept for the
+      // return to the grid; left/right switch pictures.
+      else if (e.key === 'ArrowDown') navGrid(gridColumns());
+      else if (e.key === 'ArrowUp') navGrid(-gridColumns());
+      else if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') {
+        closeLightbox();
+      } else if (e.key === 'f') setZoom(!zoomed);
+      return;
+    }
+
+    if (e.key === 'ArrowRight') navGrid(1);
+    else if (e.key === 'ArrowLeft') navGrid(-1);
+    else if (e.key === 'ArrowDown') navGrid(gridColumns());
+    else if (e.key === 'ArrowUp') navGrid(-gridColumns());
+    else if (e.key === 'PageDown') navGrid(pageDelta());
+    else if (e.key === 'PageUp') navGrid(-pageDelta());
+    else if (e.key === 'End') navGrid(gridPaths().length);
+    else if (e.key === 'Home') navGrid(-gridPaths().length);
+    else if (e.key === ' ' || e.key === 'Enter') {
+      if (!cursorPath && gridPaths().length) setCursor(gridPaths()[0]);
+      if (cursorPath) openLightbox(cursorPath);
+    } else if (e.key === 'a') {
+      toggleSelectAll();
+    } else if (e.key === 'f') {
+      // No zoom outside the lightbox.
     }
   });
 
@@ -288,6 +454,12 @@
       document.querySelectorAll('.tree-link').forEach((a) => {
         a.classList.toggle('active', a.dataset.dir === state.dir);
       });
+      // Drop the cursor if its picture is gone, otherwise restore the ring.
+      if (cursorPath && !document.querySelector(`.photo-card[data-pic-path="${CSS.escape(cursorPath)}"]`)) {
+        cursorPath = null;
+      } else if (cursorPath) {
+        setCursor(cursorPath, { scroll: false });
+      }
       updateSelectedUI();
     }
   });
@@ -303,6 +475,7 @@
     ) {
       $('#cleanup-dialog').close();
       selected.clear();
+      cursorPath = null;
       updateSelectedUI();
     }
   });
@@ -334,9 +507,7 @@
       location.assign(url);
     });
     $('#select-mode-button').addEventListener('click', () => {
-      state.selectMode = !state.selectMode;
-      $('#select-mode-button').classList.toggle('tinted', state.selectMode);
-      $('#select-mode-button').setAttribute('aria-pressed', String(state.selectMode));
+      setSelectMode(!state.selectMode);
     });
     $('#selected-button').addEventListener('click', () => {
       renderSelectedPanel();
@@ -360,15 +531,21 @@
     });
     applyTheme(themePref());
 
-    $('#lightbox-close').addEventListener('click', () => $('#lightbox').close());
+    $('#lightbox-close').addEventListener('click', closeLightbox);
     $('#lightbox-prev').addEventListener('click', () => navLightbox(-1));
     $('#lightbox-next').addEventListener('click', () => navLightbox(1));
-    // Clicking the dark area around the picture closes the lightbox.
+    // Clicking the dark area around the picture closes the lightbox; the
+    // picture itself toggles 1:1 zoom.
     $('#lightbox').addEventListener('click', (e) => {
-      if (e.target.id === 'lightbox' || e.target.id === 'lightbox-stage') {
-        $('#lightbox').close();
+      if (
+        e.target.id === 'lightbox' ||
+        e.target.id === 'lightbox-stage' ||
+        e.target.id === 'lightbox-scroll'
+      ) {
+        closeLightbox();
       }
     });
+    $('#lightbox-img').addEventListener('click', () => setZoom(!zoomed));
     const lbImg = $('#lightbox-img');
     lbImg.addEventListener('error', () => {
       lbImg.style.display = 'none';
@@ -379,6 +556,18 @@
     lbImg.addEventListener('load', () => {
       lbImg.style.display = '';
       $('#lightbox-fallback').classList.add('hidden');
+    });
+    // The `close` event does not fire in some WebViews; this is only a
+    // safety net for close paths outside the ones handled explicitly.
+    $('#lightbox').addEventListener('close', () => {
+      setZoom(false);
+      const path = gridPaths()[lightboxIndex];
+      if (path) setCursor(path);
+    });
+
+    $('#help-close').addEventListener('click', () => $('#help-dialog').close());
+    $('#help-dialog').addEventListener('click', (e) => {
+      if (e.target.id === 'help-dialog') $('#help-dialog').close();
     });
 
     updateSelectedUI();

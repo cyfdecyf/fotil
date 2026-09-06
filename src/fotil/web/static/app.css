@@ -282,9 +282,17 @@ a.crumb:hover {
   color: var(--accent);
 }
 
-/* Photo cards: hover = hairline ring, selected = destructive ring. */
-.photo-card:not(.selected):hover {
-  outline: 2px solid var(--separator);
+/* Photo cards: cursor = accent ring, hover = hairline, selected = red. */
+/* Grid cursor: outer accent halo, visible alongside the selected ring. */
+.photo-card.cursor {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+/* While hovering, the cursor is under the mouse: show a clear accent ring
+   inside the picture, not just the outer halo at the card edge. Keyed on
+   .cursor so the ring follows the cursor instead of sticking to whichever
+   card the pointer happens to stay on after keyboard navigation. */
+.photo-card.cursor:not(.selected):hover {
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 .photo-card.selected {
@@ -326,4 +334,33 @@ a.crumb:hover {
 }
 .dot-raw {
   background: var(--secondary);
+}
+
+/* Lightbox 1:1 zoom: only the inner scroll layer scrolls, so the nav
+   buttons stay pinned to the screen. */
+#lightbox-img {
+  cursor: zoom-in;
+}
+#lightbox-stage.zoomed #lightbox-scroll {
+  display: block;
+  overflow: auto;
+}
+#lightbox-stage.zoomed #lightbox-img {
+  display: block;
+  max-width: none;
+  max-height: none;
+  margin: 0 auto;
+  cursor: zoom-out;
+}
+
+/* Keyboard keys in the cheat sheet. */
+.kbd {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--fill);
+  color: var(--label);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.6;
 }

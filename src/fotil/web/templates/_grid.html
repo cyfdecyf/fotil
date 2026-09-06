@@ -13,6 +13,7 @@
     {%- if not loop.last %}{{ chevron_right('crumb-sep') }}{% endif -%}
     {% endfor %}
     <span class="count-pill">共 {{ total }} 张</span>
+    <button type="button" id="help-button" class="count-pill cursor-pointer hover:opacity-80" title="键位速查 (?)">⌨ 键位</button>
   </nav>
 
   {% if subdirs %}
