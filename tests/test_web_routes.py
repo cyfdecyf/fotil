@@ -223,6 +223,26 @@ def test_cleanup_reports_skipped(client):
     assert (client.pic_dir / '2024/05-01/a.jpg').is_file()
 
 
+def test_cleanup_multiple_pics_in_one_post(client):
+    """Two checked pics arrive as a list under one form key."""
+    resp = client.post(
+        '/cleanup',
+        data={'library': 'main', 'pics': ['2024/05-01/a.jpg', '2024/05-01/b.hif']},
+    )
+    assert resp.status_code == 200
+    assert '清理完成' in resp.text
+    assert not (client.pic_dir / '2024/05-01/a.jpg').exists()
+    assert not (client.pic_dir / '2024/05-01/b.hif').exists()
+    assert (client.trash_dir / '2024/05-01/a.jpg').is_file()
+    assert (client.trash_dir / '2024/05-01/b.hif').is_file()
+    # Same-stem raws of both pics are trashed too.
+    assert (client.trash_dir / '2024/05-01/a.arw').is_file()
+    assert (client.trash_dir / '2024/05-01/b.arw').is_file()
+    # Other directories stay untouched.
+    assert (client.pic_dir / '2024/05-02/c.jpg').is_file()
+    assert (client.raw_dir / '2024/05-02/orphan.arw').is_file()
+
+
 def test_static_assets_served(client):
     for asset in ('app.js', 'app.css', 'htmx.min.js', 'tailwind.js', 'alpine.min.js'):
         assert client.get(f'/static/{asset}').status_code == 200, asset

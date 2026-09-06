@@ -1,8 +1,11 @@
 """HTTP routes for the web UI."""
 
+from typing import Annotated
+
 from litestar import Request, get, post
+from litestar.enums import RequestEncodingType
 from litestar.exceptions import NotFoundException, ValidationException
-from litestar.params import FromQuery
+from litestar.params import Body, FromQuery
 from litestar.response import File, Response, Template
 
 from fotil.config import Config, load_config
@@ -141,15 +144,22 @@ def image(
     )
 
 
-@post('/cleanup', status_code=200)
-async def cleanup(request: Request) -> Response:
+@post('/cleanup', status_code=200, sync_to_thread=True)
+def cleanup(
+    request: Request,
+    data: Annotated[
+        dict[str, str | list[str]], Body(media_type=RequestEncodingType.URL_ENCODED)
+    ],
+) -> Response:
     """Move the selected pics and their same-stem raws into trash_dir."""
-    form = await request.form()
-    library = form.get('library')
+    library = data.get('library')
     _, lib_conf = _library(
         request, library if isinstance(library, str) and library else None
     )
-    pics = [p for p in form.getall('pics') if isinstance(p, str) and p]
+    # URL_ENCODED form parsing yields str for a single value and list[str]
+    # for several values under one key, so normalize pics to a list.
+    pics_raw = data.get('pics')
+    pics = [pics_raw] if isinstance(pics_raw, str) else list(pics_raw or [])
     try:
         result = service.cleanup_pics(lib_conf, pics)
     except InvalidPathError as exc:
