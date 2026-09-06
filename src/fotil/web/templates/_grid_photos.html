@@ -13,7 +13,7 @@
 </div>
 {% if has_more %}
 <div class="mt-4 text-center">
-  <button class="text-sm border border-neutral-300 bg-white rounded px-4 py-2 hover:bg-neutral-100"
+  <button id="load-more" class="text-sm border border-neutral-300 bg-white rounded px-4 py-2 hover:bg-neutral-100"
           hx-get="/grid?library={{ library | urlencode }}&dir={{ dir | urlencode }}&offset={{ offset + page_size }}"
           hx-target="this" hx-swap="outerHTML">
     加载更多 (剩余 {{ remaining }})

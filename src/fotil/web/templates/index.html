@@ -11,6 +11,10 @@
   </select>
   <span class="text-xs text-neutral-400 truncate max-w-md" title="{{ trash_dir }}">trash: {{ trash_dir }}</span>
   <div class="ml-auto flex items-center gap-2">
+    <button id="select-mode-button" aria-pressed="false"
+            class="text-sm border border-neutral-300 rounded px-3 py-1 hover:bg-neutral-100">
+      选择模式
+    </button>
     <button id="selected-button"
             class="text-sm border border-neutral-300 rounded px-3 py-1 hover:bg-neutral-100">
       已选 <span id="selected-count" class="font-semibold">0</span>
@@ -62,6 +66,24 @@
     <button id="selected-close" class="text-neutral-500 hover:text-neutral-900 text-xl leading-none">×</button>
   </div>
   <div id="selected-items" class="grid grid-cols-4 gap-3 overflow-auto max-h-[24rem]"></div>
+</dialog>
+
+<dialog id="lightbox" class="m-0 p-0 w-screen h-screen max-w-none max-h-none bg-black/95 text-white">
+  <div class="w-full h-full flex flex-col">
+    <header class="flex items-center gap-3 px-4 py-2 shrink-0">
+      <span id="lightbox-name" class="text-sm truncate"></span>
+      <span id="lightbox-pos" class="text-xs text-neutral-400 shrink-0"></span>
+      <span id="lightbox-marked" class="hidden text-xs bg-red-600 rounded px-2 py-0.5 shrink-0">已标记删除</span>
+      <span class="ml-auto text-xs text-neutral-500 shrink-0 hidden md:inline">← → 切换 · d 标记删除 · u 撤销 · Esc 关闭</span>
+      <button id="lightbox-close" class="text-2xl leading-none text-neutral-400 hover:text-white shrink-0" title="关闭 (Esc)">×</button>
+    </header>
+    <div id="lightbox-stage" class="flex-1 min-h-0 relative flex items-center justify-center">
+      <img id="lightbox-img" class="max-w-full max-h-full object-contain" alt="">
+      <div id="lightbox-fallback" class="hidden absolute inset-0 flex items-center justify-center text-neutral-400 whitespace-pre text-center"></div>
+      <button id="lightbox-prev" class="absolute left-2 top-1/2 -translate-y-1/2 text-6xl text-white/60 hover:text-white px-2" title="上一张 (←)">‹</button>
+      <button id="lightbox-next" class="absolute right-2 top-1/2 -translate-y-1/2 text-6xl text-white/60 hover:text-white px-2" title="下一张 (→)">›</button>
+    </div>
+  </div>
 </dialog>
 
 <div id="cleanup-result"></div>

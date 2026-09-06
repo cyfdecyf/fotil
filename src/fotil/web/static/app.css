@@ -12,6 +12,12 @@
   font-weight: 600;
 }
 
+/* Picture under the cursor: the grid d/u shortcuts apply to it. */
+.photo-card:not(.selected):hover {
+  outline: 3px solid #a3a3a3;
+  outline-offset: -3px;
+}
+
 /* Selected photo card: red ring + check badge. */
 .photo-card.selected {
   outline: 4px solid #dc2626;

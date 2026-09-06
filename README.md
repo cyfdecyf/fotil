@@ -45,10 +45,13 @@ quick cull after importing:
 fotil web                # fotil web --host 0.0.0.0 --port 8000 to expose it
 ```
 
-Browse the `pic_dir` directory tree, click pictures to select the ones to
-throw away, then hit **cleanup raw**: the selected pictures and their
-same-stem raw files are moved into `trash_dir`, mirroring the original
-layout. Nothing is deleted — restore by moving files back by hand.
+Browse the `pic_dir` directory tree and cull pictures: click one to view it
+enlarged, flip with `←`/`→`, press `d` to mark it for deletion and `u` to
+undo (`d`/`u` also work in the grid for the picture under the cursor). Toggle
+**选择模式** (select mode) to mark pictures by clicking instead. Then hit
+**cleanup raw**: the marked pictures and their same-stem raw files are moved
+into `trash_dir`, mirroring the original layout. Nothing is deleted — restore
+by moving files back by hand.
 
 HEIF/HIF pictures (Sony camera format) are transcoded to cached JPEG
 previews under `~/.cache/fotil/web` for display; originals stay untouched.
