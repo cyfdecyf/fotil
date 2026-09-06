@@ -5,8 +5,10 @@ All user supplied paths are validated to stay inside the library directories.
 """
 
 import hashlib
+import threading
 
-from collections.abc import Iterable
+from collections import OrderedDict
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -95,14 +97,69 @@ def _contained_dir(root: Path, dir_rel: str) -> Path:
     return target
 
 
+# Directory listing cache: (resolved dir, kind) -> (dir mtime_ns, value).
+# A directory's mtime_ns changes whenever its direct entries are added,
+# removed or renamed, which is exactly what the name-only listings depend
+# on; editing file contents leaves it untouched.
+_listings: OrderedDict[tuple[Path, str], tuple[int, object]] = OrderedDict()
+_listings_lock = threading.Lock()
+_LISTINGS_MAX = 256
+
+
+def _cached_listing[T](directory: Path, kind: str, compute: Callable[[], T]) -> T:
+    """Return compute() cached by directory's mtime; a changed mtime invalidates.
+
+    Keys pair the resolved directory path (as returned by _contained_dir)
+    with a kind tag, so a directory holds one entry per computed value kind.
+    compute() runs outside the lock; under thread races the worst case is a
+    wasted recompute.
+    """
+    key = (directory, kind)
+    try:
+        mtime = directory.stat().st_mtime_ns
+    except OSError:
+        return compute()
+    with _listings_lock:
+        hit = _listings.get(key)
+        if hit is not None and hit[0] == mtime:
+            _listings.move_to_end(key)
+            return hit[1]
+    value = compute()
+    with _listings_lock:
+        _listings[key] = (mtime, value)
+        while len(_listings) > _LISTINGS_MAX:
+            _listings.popitem(last=False)
+    return value
+
+
+def _subdir_names(directory: Path) -> list[str]:
+    """Sorted non-hidden subdirectory names directly under directory."""
+    return sorted(
+        p.name for p in directory.iterdir() if p.is_dir() and not p.name.startswith('.')
+    )
+
+
+def _has_subdirs(directory: Path) -> bool:
+    """Whether directory contains any non-hidden subdirectory."""
+    return bool(_cached_listing(directory, 'dirs', lambda: _subdir_names(directory)))
+
+
+def _pic_listing(lib_conf: LibraryConfig, directory: Path) -> tuple[list[Path], int]:
+    """Full sorted pic listing under directory relative to pic_dir, and count."""
+    files = sorted(
+        p.relative_to(lib_conf.pic_dir)
+        for p in directory.iterdir()
+        if p.is_file() and lib_conf.pic_file_filter(p)
+    )
+    return files, len(files)
+
+
 def list_subdirs(lib_conf: LibraryConfig, dir_rel: str = '') -> list[str]:
     """Sorted non-hidden subdirectory names directly under pic_dir/dir_rel."""
     directory = _contained_dir(lib_conf.pic_dir, dir_rel)
     if not directory.is_dir():
         return []
-    return sorted(
-        p.name for p in directory.iterdir() if p.is_dir() and not p.name.startswith('.')
-    )
+    return _cached_listing(directory, 'dirs', lambda: _subdir_names(directory))
 
 
 def list_subdirs_details(lib_conf: LibraryConfig, dir_rel: str = '') -> list[dict]:
@@ -114,13 +171,10 @@ def list_subdirs_details(lib_conf: LibraryConfig, dir_rel: str = '') -> list[dic
     directory = _contained_dir(lib_conf.pic_dir, dir_rel)
     if not directory.is_dir():
         return []
-    nodes = []
-    for p in sorted(directory.iterdir()):
-        if not (p.is_dir() and not p.name.startswith('.')):
-            continue
-        has_children = any(q.is_dir() and not q.name.startswith('.') for q in p.iterdir())
-        nodes.append({'name': p.name, 'has_children': has_children})
-    return nodes
+    names = _cached_listing(directory, 'dirs', lambda: _subdir_names(directory))
+    return [
+        {'name': name, 'has_children': _has_subdirs(directory / name)} for name in names
+    ]
 
 
 def list_pics(
@@ -134,12 +188,10 @@ def list_pics(
     directory = _contained_dir(lib_conf.pic_dir, dir_rel)
     if not directory.is_dir():
         return [], 0
-    files = sorted(
-        p.relative_to(lib_conf.pic_dir)
-        for p in directory.iterdir()
-        if p.is_file() and lib_conf.pic_file_filter(p)
+    files, total = _cached_listing(
+        directory, 'files', lambda: _pic_listing(lib_conf, directory)
     )
-    return files[offset : offset + limit], len(files)
+    return files[offset : offset + limit], total
 
 
 def _contained_pic_file(lib_conf: LibraryConfig, path_rel: str) -> Path:

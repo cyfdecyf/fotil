@@ -35,6 +35,13 @@ def write_big_pic(path: Path) -> None:
     Image.new('RGB', (3000, 2000), 'green').save(path)
 
 
+@pytest.fixture(autouse=True)
+def clear_listing_cache():
+    """The module-level listing cache must not leak between tests."""
+    service._listings.clear()
+    yield
+
+
 @pytest.fixture
 def lib(tmp_path, monkeypatch):
     """Library with two date dirs of pics, matching raws and one raw orphan."""
@@ -112,6 +119,33 @@ def test_list_pics_empty_dir(lib):
     pics, total = service.list_pics(lib, 'missing')
     assert pics == []
     assert total == 0
+
+
+def test_list_pics_cache_refreshes_on_new_file(lib):
+    _, total = service.list_pics(lib, '2024/05-01')
+    assert total == 2
+    write_pic(lib.pic_dir / '2024/05-01/d.jpg')
+    pics, total = service.list_pics(lib, '2024/05-01')
+    assert [p.name for p in pics] == ['a.jpg', 'b.hif', 'd.jpg']
+    assert total == 3
+
+
+def test_list_pics_cache_refreshes_after_cleanup(lib):
+    service.list_pics(lib, '2024/05-01')
+    service.cleanup_pics(lib, ['2024/05-01/a.jpg'])
+    pics, total = service.list_pics(lib, '2024/05-01')
+    assert [p.name for p in pics] == ['b.hif']
+    assert total == 1
+
+
+def test_list_pics_cache_survives_content_touch(lib):
+    service.list_pics(lib, '2024/05-01')
+    # Rewriting a file's content does not change the directory, so the
+    # name-only listing stays valid.
+    write_pic(lib.pic_dir / '2024/05-01/a.jpg')
+    pics, total = service.list_pics(lib, '2024/05-01')
+    assert [p.name for p in pics] == ['a.jpg', 'b.hif']
+    assert total == 2
 
 
 def test_contained_paths_reject_escape(lib):
