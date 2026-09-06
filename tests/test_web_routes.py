@@ -92,6 +92,8 @@ def test_grid_renders_photos(client):
     assert resp.status_code == 200
     assert 'data-pic-path="2024/05-01/a.jpg"' in resp.text
     assert 'data-pic-path="2024/05-01/b.hif"' in resp.text
+    # Grid cards request the thumb variant of /image.
+    assert 'path=2024/05-01/a.jpg&size=thumb' in resp.text
 
 
 def test_grid_offset_returns_more_chunk(client):

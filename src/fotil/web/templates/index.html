@@ -75,7 +75,7 @@
   <div id="selected-items" class="grid grid-cols-4 gap-3 overflow-auto max-h-[24rem]">
     <template x-for="p in [...$store.ui.selected]" :key="p">
       <div class="relative">
-        <img class="w-full h-24 object-cover rounded" loading="lazy" alt=""
+        <img class="w-full h-24 object-cover rounded" loading="lazy" decoding="async" alt=""
              :src="$store.ui.picUrl(p)">
         <div class="text-xs truncate mt-1" x-text="p.split('/').pop()"></div>
         <button @click="$store.ui.unmark(p)" title="移除"
@@ -98,7 +98,7 @@
     </header>
     <div id="lightbox-stage" class="flex-1 min-h-0 relative">
       <div id="lightbox-scroll" class="w-full h-full overflow-hidden flex items-center justify-center">
-        <img id="lightbox-img" class="max-w-full max-h-full object-contain" alt=""
+        <img id="lightbox-img" class="max-w-full max-h-full object-contain" alt="" decoding="async"
              :src="$store.ui.lbPath && $store.ui.picUrl($store.ui.lbPath)">
       </div>
       <div id="lightbox-fallback" class="hidden absolute inset-0 flex items-center justify-center text-white/50 whitespace-pre text-center"></div>

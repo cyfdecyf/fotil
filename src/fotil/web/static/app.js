@@ -41,7 +41,7 @@
         this.selected.delete(p);
       },
       picUrl(p) {
-        return `/image?library=${encodeURIComponent(this.library)}&path=${encodeURIComponent(p)}`;
+        return `/image?library=${encodeURIComponent(this.library)}&path=${encodeURIComponent(p)}&size=large`;
       },
       // The next three read the live DOM for totals; they re-evaluate when
       // lbIndex changes, which covers every path that swaps grid content.
