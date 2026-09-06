@@ -244,5 +244,5 @@ def test_cleanup_multiple_pics_in_one_post(client):
 
 
 def test_static_assets_served(client):
-    for asset in ('app.js', 'app.css', 'htmx.min.js', 'tailwind.js', 'alpine.min.js'):
+    for asset in ('app.js', 'app.css', 'htmx.min.js', 'tw.css', 'alpine.min.js'):
         assert client.get(f'/static/{asset}').status_code == 200, asset

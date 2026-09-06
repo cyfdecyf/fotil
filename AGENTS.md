@@ -21,7 +21,7 @@ fotil 是一个相机照片/视频处理工具。
 
 - `src/fotil/` — 核心模块：`config.py`（msgspec Struct 配置）、`exiftool.py`（exiftool 命令封装）、`importer.py`、`filedb.py`（导入去重哈希库）、`fs.py`、`library.py`
 - `src/fotil/cli/` — typer 命令：`geotag.py`（最大最复杂）、`importer.py`、`library.py`、`web.py`、`filedb.py`
-- `src/fotil/web/` — Litestar + Jinja2 + htmx 的 Web UI：`routes.py`、`service.py`、`transcode.py`（HEIF→JPEG 预览），`static/` 中 htmx/tailwind 为内嵌 vendor 文件
+- `src/fotil/web/` — Litestar + Jinja2 + htmx 的 Web UI：`routes.py`、`service.py`、`transcode.py`（HEIF→JPEG 预览），`static/` 中 htmx/alpine 为内嵌 vendor 文件；Tailwind 经 `tailwind.input.css` 预编译为 `static/tw.css`（依赖见同目录 `package.json`）
 - `tests/` — pytest，测试媒体在 `tests/data/`
 - `docs/samples/` — iPhone 16 / Sony A7M4 样本文件的元数据行为详解
 
@@ -38,6 +38,12 @@ uv run fotil -h                      # 运行 CLI（需 exiftool 在 PATH）
 ```
 
 无独立 typechecker。Python 要求 >=3.14。
+
+修改模板或 `static/app.js` 用到新 Tailwind class 后，必须重跑再生成命令更新 `static/tw.css`，否则新类无样式（首次需先 `cd src/fotil/web && npm install`）：
+
+```bash
+npx @tailwindcss/cli@4.3.3 -i src/fotil/web/tailwind.input.css -o src/fotil/web/static/tw.css
+```
 
 ## 架构边界
 

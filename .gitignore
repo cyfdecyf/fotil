@@ -1,5 +1,6 @@
 tmp/
 .zcode
+node_modules/
 
 # macOS
 .DS_Store
