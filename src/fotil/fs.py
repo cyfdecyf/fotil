@@ -27,8 +27,11 @@ def iter_directory_files(
     if _root_dir is None:
         _root_dir = directory
 
+    # List the directory once and reuse entries for the recursion pass and
+    # the file pass below.
+    entries = sorted(directory.iterdir())
     has_file = False
-    for f in sorted(directory.iterdir()):
+    for f in entries:
         if f.is_dir() and not f.name.startswith('.'):
             # Recursive call.
             yield from iter_directory_files(f, file_filter, _root_dir=_root_dir)
@@ -38,7 +41,6 @@ def iter_directory_files(
     if not has_file:
         return
 
-    # To save memory, do not cache listed files in the first iteration.
-    for f in sorted(directory.iterdir()):
+    for f in entries:
         if f.is_file() and ((file_filter is None) or file_filter(f)):
             yield f.relative_to(_root_dir)
