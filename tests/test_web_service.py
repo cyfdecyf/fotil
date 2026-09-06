@@ -74,6 +74,16 @@ def test_list_subdirs(lib):
     assert service.list_subdirs(lib, 'missing') == []
 
 
+def test_list_subdirs_details(lib):
+    assert service.list_subdirs_details(lib, '') == [
+        {'name': '2024', 'has_children': True}
+    ]
+    nodes = service.list_subdirs_details(lib, '2024')
+    assert [n['name'] for n in nodes] == ['05-01', '05-02']
+    assert all(not n['has_children'] for n in nodes)
+    assert service.list_subdirs_details(lib, 'missing') == []
+
+
 def test_list_subdirs_skips_hidden(lib):
     (lib.pic_dir / '.hidden').mkdir()
     assert service.list_subdirs(lib, '') == ['2024']

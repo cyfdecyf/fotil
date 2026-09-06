@@ -1,22 +1,29 @@
+{% from '_icons.html' import house, folder, chevron_right %}
 <div id="grid-root" data-library="{{ library }}" data-dir="{{ dir }}">
-  <nav class="flex items-center gap-1 mb-4 text-sm">
+  <nav class="crumbs">
     {% for name, rel in breadcrumb %}
-    <a hx-get="/grid?library={{ library | urlencode }}&dir={{ rel | urlencode }}&offset=0"
-       hx-target="#main" hx-swap="innerHTML"
-       class="hover:underline {% if loop.last %}font-semibold{% endif %}">{{ name }}</a>
-    {% if not loop.last %}<span class="text-neutral-400">/</span>{% endif %}
+    <a class="crumb {% if loop.last %}crumb-current{% endif %}" title="{{ name }}"
+       hx-get="/grid?library={{ library | urlencode }}&dir={{ rel | urlencode }}&offset=0"
+       hx-target="#main" hx-swap="innerHTML">
+      {%- if loop.first -%}{{ house('tree-ico') }}
+      {%- elif loop.last -%}{{ folder('tree-ico') }}
+      {%- endif -%}
+      <span class="crumb-name">{{ name }}</span>
+    </a>
+    {%- if not loop.last %}{{ chevron_right('crumb-sep') }}{% endif -%}
     {% endfor %}
-    <span class="ml-3 text-xs text-neutral-400">共 {{ total }} 张</span>
+    <span class="count-pill">共 {{ total }} 张</span>
   </nav>
 
   {% if subdirs %}
   <div class="flex flex-wrap gap-2 mb-4">
     {% for d in subdirs %}
     {% set child = (dir ~ '/' ~ d) if dir else d %}
-    <a hx-get="/grid?library={{ library | urlencode }}&dir={{ child | urlencode }}&offset=0"
-       hx-target="#main" hx-swap="innerHTML"
-       class="text-sm border border-neutral-300 bg-white rounded px-3 py-2 hover:bg-neutral-100">
-      📁 {{ d }}
+    <a class="subdir-chip"
+       hx-get="/grid?library={{ library | urlencode }}&dir={{ child | urlencode }}&offset=0"
+       hx-target="#main" hx-swap="innerHTML">
+      {{ folder('tree-ico') }}
+      {{ d }}
     </a>
     {% endfor %}
   </div>

@@ -78,6 +78,9 @@ def test_index_renders_library_page(client):
     assert 'value="main" selected' in resp.text
     # The tree root lists the top level dirs.
     assert 'data-dir="2024"' in resp.text
+    # Theme bootstrap: follows system by default, switcher present.
+    assert 'fotil-theme' in resp.text
+    assert 'id="theme-seg"' in resp.text
 
 
 def test_index_unknown_library_is_404(client):
@@ -120,6 +123,17 @@ def test_tree_renders_children(client):
     assert resp.status_code == 200
     assert 'data-dir="2024/05-01"' in resp.text
     assert 'data-dir="2024/05-02"' in resp.text
+
+
+def test_tree_leaf_dirs_have_no_toggle(client):
+    # 2024 contains subdirs -> one lazy-load toggle at the root level.
+    root = client.get('/tree?dir=')
+    assert root.text.count('data-loaded="false"') == 1
+    # 05-01/05-02 are leaves -> no toggles rendered at all.
+    deep = client.get('/tree?dir=2024')
+    assert deep.status_code == 200
+    assert 'data-loaded="false"' not in deep.text
+    assert 'leaf' in deep.text
 
 
 def test_image_serves_original(client):

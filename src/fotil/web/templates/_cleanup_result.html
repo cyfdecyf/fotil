@@ -1,21 +1,22 @@
-<div class="fixed bottom-4 right-4 w-96 max-w-[90vw] bg-white border border-neutral-200 shadow-xl rounded-lg p-4">
+<div class="fixed bottom-4 right-4 w-96 max-w-[90vw] ios-dialog p-4">
   <div class="flex justify-between items-center mb-2">
     <strong class="text-sm">清理完成</strong>
-    <button data-close-result class="text-neutral-500 hover:text-neutral-900 text-xl leading-none">×</button>
+    <button data-close-result
+            class="w-6 h-6 rounded-full bg-[var(--fill)] hover:bg-[var(--fill-strong)] text-[var(--secondary)] text-xs leading-none">×</button>
   </div>
   <p class="text-sm mb-2">
     已移入 trash:{{ result.trashed_pics | length }} 张照片,
     {{ result.trashed_raws | length }} 个 raw 文件。
   </p>
   {% if result.trashed_pics or result.trashed_raws %}
-  <ul class="max-h-48 overflow-auto text-xs text-neutral-600 border-t border-neutral-100 pt-2 space-y-0.5">
-    {% for p in result.trashed_pics %}<li class="truncate">📷 {{ p }}</li>{% endfor %}
-    {% for p in result.trashed_raws %}<li class="truncate">🎞 {{ p }}</li>{% endfor %}
+  <ul class="max-h-48 overflow-auto text-xs text-[var(--secondary)] border-t border-[var(--separator)] pt-2 space-y-1">
+    {% for p in result.trashed_pics %}<li class="truncate"><span class="dot dot-pic"></span>{{ p }}</li>{% endfor %}
+    {% for p in result.trashed_raws %}<li class="truncate"><span class="dot dot-raw"></span>{{ p }}</li>{% endfor %}
   </ul>
   {% endif %}
   {% if result.skipped %}
-  <p class="text-xs text-red-600 mt-2">跳过 {{ result.skipped | length }} 项:</p>
-  <ul class="max-h-24 overflow-auto text-xs text-red-600 space-y-0.5">
+  <p class="text-xs mt-2 text-[var(--danger)]">跳过 {{ result.skipped | length }} 项:</p>
+  <ul class="max-h-24 overflow-auto text-xs text-[var(--danger)] space-y-0.5">
     {% for msg in result.skipped %}<li class="truncate">{{ msg }}</li>{% endfor %}
   </ul>
   {% endif %}

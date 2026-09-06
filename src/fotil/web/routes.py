@@ -64,7 +64,7 @@ def index(
     name = library or conf.default_library
     try:
         ctx = _grid_context(lib_conf, name, dir, 0)
-        ctx['dirs'] = service.list_subdirs(lib_conf, '')
+        ctx['nodes'] = service.list_subdirs_details(lib_conf, '')
     except InvalidPathError as exc:
         raise BadRequest(str(exc)) from exc
     ctx['libraries'] = sorted(conf.library)
@@ -79,13 +79,13 @@ def tree(
     """Children of one directory tree node, loaded lazily by HTMX."""
     conf, lib_conf = _library(request, library)
     try:
-        dirs = service.list_subdirs(lib_conf, dir)
+        nodes = service.list_subdirs_details(lib_conf, dir)
     except InvalidPathError as exc:
         raise BadRequest(str(exc)) from exc
     return Template(
         template_name='_tree.html',
         context={
-            'dirs': dirs,
+            'nodes': nodes,
             'dir': dir,
             'library': library or conf.default_library,
         },

@@ -95,6 +95,24 @@ def list_subdirs(lib_conf: LibraryConfig, dir_rel: str = '') -> list[str]:
     )
 
 
+def list_subdirs_details(lib_conf: LibraryConfig, dir_rel: str = '') -> list[dict]:
+    """Subdirectories under pic_dir/dir_rel, with child-dir presence.
+
+    Used by the directory tree to render expand arrows only for directories
+    that actually contain subdirectories.
+    """
+    directory = _contained_dir(lib_conf.pic_dir, dir_rel)
+    if not directory.is_dir():
+        return []
+    nodes = []
+    for p in sorted(directory.iterdir()):
+        if not (p.is_dir() and not p.name.startswith('.')):
+            continue
+        has_children = any(q.is_dir() and not q.name.startswith('.') for q in p.iterdir())
+        nodes.append({'name': p.name, 'has_children': has_children})
+    return nodes
+
+
 def list_pics(
     lib_conf: LibraryConfig, dir_rel: str = '', offset: int = 0, limit: int = PAGE_SIZE
 ) -> tuple[list[Path], int]:

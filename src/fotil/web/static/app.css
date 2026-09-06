@@ -1,31 +1,329 @@
-/* Directory tree collapse: children only visible when the node is open. */
+/* iOS-flavored theme: light by default, `.dark` on <html> overrides.
+   Palette follows the iOS system colors (grouped backgrounds, fills,
+   separators, tints). */
+:root {
+  --bg: #f2f2f7;
+  --surface: #ffffff;
+  --fill: rgba(120, 120, 128, 0.16);
+  --fill-strong: rgba(120, 120, 128, 0.28);
+  --label: #000000;
+  --secondary: rgba(60, 60, 67, 0.6);
+  --separator: rgba(60, 60, 67, 0.15);
+  --accent: #007aff;
+  --accent-fill: rgba(0, 122, 255, 0.14);
+  --danger: #ff3b30;
+}
+.dark {
+  --bg: #000000;
+  --surface: #1c1c1e;
+  --fill: rgba(120, 120, 128, 0.3);
+  --fill-strong: rgba(120, 120, 128, 0.44);
+  --label: #ffffff;
+  --secondary: rgba(235, 235, 245, 0.6);
+  --separator: rgba(84, 84, 88, 0.5);
+  --accent: #0a84ff;
+  --accent-fill: rgba(10, 132, 255, 0.24);
+  --danger: #ff453a;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
+    'PingFang SC', 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Capsule buttons. */
+.btn {
+  border: none;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--label);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.1s;
+}
+.btn:hover {
+  background: var(--fill-strong);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.btn:focus-visible,
+.seg button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.btn.tinted {
+  background: var(--accent-fill);
+  color: var(--accent);
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover {
+  background: var(--danger);
+  filter: brightness(1.08);
+}
+
+/* Library select, styled like a capsule button with a chevron. */
+.ios-select {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  background-color: var(--fill);
+  color: var(--label);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 28px 6px 14px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='%238e8e93' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.ios-select:hover {
+  background-color: var(--fill-strong);
+}
+
+/* Segmented control (theme switcher). */
+.seg {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--fill);
+}
+.seg button {
+  border: none;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--secondary);
+  background: transparent;
+  cursor: pointer;
+}
+.seg button.seg-on {
+  background: var(--surface);
+  color: var(--label);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.dark .seg button.seg-on {
+  background: #48484a;
+}
+
+/* Directory tree: grid rows of [chevron | name]. */
+.tree-node {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  border-radius: 8px;
+}
+.tree-toggle {
+  grid-column: 1;
+  grid-row: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  cursor: pointer;
+  color: var(--secondary);
+}
+.tree-node.leaf .tree-toggle {
+  visibility: hidden;
+}
+.chev {
+  width: 10px;
+  height: 10px;
+}
+.chev-d {
+  display: none;
+}
+.tree-node.open .chev-r {
+  display: none;
+}
+.tree-node.open .chev-d {
+  display: block;
+}
 .tree-children {
   display: none;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-left: 16px;
 }
 .tree-node.open > .tree-children {
   display: block;
 }
-
-/* Active directory in the tree and breadcrumb. */
+.tree-link {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px 8px 5px 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tree-ico {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--secondary);
+}
+.tree-link:hover {
+  background: var(--fill);
+}
+.tree-link:hover .tree-ico {
+  color: var(--accent);
+}
+.tree-node.open .tree-ico {
+  color: var(--accent);
+}
 .tree-link.active {
-  background: #e5e5e5;
+  color: var(--accent);
   font-weight: 600;
 }
-
-/* Picture under the cursor: the grid d/u shortcuts apply to it. */
-.photo-card:not(.selected):hover {
-  outline: 3px solid #a3a3a3;
-  outline-offset: -3px;
+.tree-link.active .tree-ico {
+  color: var(--accent);
+}
+/* Color the whole row (chevron column included) for the active node. */
+li.tree-node:has(> .tree-link.active) {
+  background: var(--accent-fill);
+}
+li.tree-node:has(> .tree-link.active) > .tree-link {
+  background: transparent;
+}
+.tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Selected photo card: red ring + check badge. */
+/* Breadcrumb path bar. */
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--secondary);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  flex: none;
+}
+a.crumb:hover {
+  background: var(--fill);
+  color: var(--label);
+}
+.crumb-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+.crumb-current {
+  color: var(--label);
+  font-weight: 600;
+}
+.crumb-current .tree-ico {
+  color: var(--accent);
+}
+.crumb-sep {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  opacity: 0.5;
+}
+.count-pill {
+  flex: none;
+  margin-left: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--fill);
+  font-size: 12px;
+  color: var(--secondary);
+}
+
+/* Subdirectory chips with a folder glyph. */
+.subdir-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--fill);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label);
+  cursor: pointer;
+}
+.subdir-chip:hover {
+  background: var(--fill-strong);
+}
+.subdir-chip svg {
+  color: var(--accent);
+}
+
+/* Photo cards: hover = hairline ring, selected = destructive ring. */
+.photo-card:not(.selected):hover {
+  outline: 2px solid var(--separator);
+  outline-offset: -2px;
+}
 .photo-card.selected {
-  outline: 4px solid #dc2626;
-  outline-offset: -4px;
+  outline: 3px solid var(--danger);
+  outline-offset: -3px;
 }
 .photo-card .pick-badge {
   display: none;
 }
 .photo-card.selected .pick-badge {
   display: flex;
+}
+
+/* Rounded grouped dialogs, iOS alert style. */
+.ios-dialog {
+  /* Tailwind preflight resets margins; restore native dialog centering. */
+  margin: auto;
+  background: var(--surface);
+  color: var(--label);
+  border: 1px solid var(--separator);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+.ios-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* Cleanup result list markers. */
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.dot-pic {
+  background: var(--danger);
+}
+.dot-raw {
+  background: var(--secondary);
 }

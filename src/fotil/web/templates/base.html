@@ -4,12 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}fotil{% endblock %}</title>
+  <script>
+    (() => {
+      const pref = localStorage.getItem('fotil-theme') || 'auto';
+      const dark = pref === 'dark' ||
+        (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', dark);
+    })();
+  </script>
   <script src="/static/tailwind.js"></script>
   <script src="/static/htmx.min.js" defer></script>
   <script src="/static/app.js" defer></script>
   <link rel="stylesheet" href="/static/app.css">
 </head>
-<body class="h-screen flex flex-col bg-neutral-100 text-neutral-900">
+<body class="h-screen flex flex-col bg-[var(--bg)] text-[var(--label)]">
   {% block body %}{% endblock %}
 </body>
 </html>

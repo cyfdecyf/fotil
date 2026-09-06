@@ -55,6 +55,8 @@ by moving files back by hand.
 
 HEIF/HIF pictures (Sony camera format) are transcoded to cached JPEG
 previews under `~/.cache/fotil/web` for display; originals stay untouched.
+The UI follows the system light/dark theme; the 自动/浅色/深色 control in
+the toolbar overrides it (stored in the browser).
 
 ## Restore date and GPS on an exported video
 

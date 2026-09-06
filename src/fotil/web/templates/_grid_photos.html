@@ -1,19 +1,19 @@
 {% if pics %}
 <div id="photo-grid" class="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
   {% for pic in pics %}
-  <figure class="photo-card relative aspect-square overflow-hidden rounded-lg bg-neutral-200 cursor-pointer"
+  <figure class="photo-card relative aspect-square overflow-hidden rounded-xl bg-[var(--fill)] cursor-pointer"
           data-pic-path="{{ pic.rel }}">
     <img class="w-full h-full object-cover" loading="lazy" alt="{{ pic.name }}"
          src="/image?library={{ library | urlencode }}&path={{ pic.rel | urlencode }}"
          onerror="fotilPicError(this)">
-    <figcaption class="absolute inset-x-0 bottom-0 bg-black/40 text-white text-xs px-1 py-0.5 truncate">{{ pic.name }}</figcaption>
-    <span class="pick-badge absolute top-1 right-1 w-6 h-6 rounded-full bg-red-600 text-white text-sm flex items-center justify-center">✓</span>
+    <figcaption class="absolute inset-x-0 bottom-0 px-1.5 py-1 text-[11px] text-white/90 truncate bg-gradient-to-t from-black/60 to-transparent">{{ pic.name }}</figcaption>
+    <span class="pick-badge absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-[var(--danger)] text-white text-sm items-center justify-center shadow">✓</span>
   </figure>
   {% endfor %}
 </div>
 {% if has_more %}
-<div class="mt-4 text-center">
-  <button id="load-more" class="text-sm border border-neutral-300 bg-white rounded px-4 py-2 hover:bg-neutral-100"
+<div class="mt-5 text-center">
+  <button id="load-more" class="btn"
           hx-get="/grid?library={{ library | urlencode }}&dir={{ dir | urlencode }}&offset={{ offset + page_size }}"
           hx-target="this" hx-swap="outerHTML">
     加载更多 (剩余 {{ remaining }})
@@ -21,5 +21,5 @@
 </div>
 {% endif %}
 {% elif offset == 0 %}
-<p class="text-neutral-500">此目录没有照片。</p>
+<p class="text-[var(--secondary)]">此目录没有照片。</p>
 {% endif %}

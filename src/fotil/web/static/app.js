@@ -22,6 +22,20 @@
 
   const hasMore = () => !!document.getElementById('load-more');
 
+  // ---- Theme --------------------------------------------------------------
+
+  const themePref = () => localStorage.getItem('fotil-theme') || 'auto';
+
+  function applyTheme(pref) {
+    const dark =
+      pref === 'dark' ||
+      (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark', dark);
+    document.querySelectorAll('#theme-seg button').forEach((b) => {
+      b.classList.toggle('seg-on', b.dataset.theme === pref);
+    });
+  }
+
   function updateSelectedUI() {
     $('#selected-count').textContent = selected.size;
 
@@ -65,7 +79,7 @@
 
       const btn = document.createElement('button');
       btn.className =
-        'absolute top-0 right-0 bg-red-600 text-white text-xs rounded-full w-5 h-5';
+        'absolute top-0 right-0 bg-[var(--danger)] text-white text-xs rounded-full w-5 h-5';
       btn.textContent = '×';
       btn.dataset.picPath = p;
       btn.dataset.unselect = '1';
@@ -235,7 +249,7 @@
     img.remove();
     const ph = document.createElement('div');
     ph.className =
-      'w-full h-full flex items-center justify-center text-neutral-500 text-xs p-2 text-center break-all';
+      'w-full h-full flex items-center justify-center text-[var(--secondary)] text-xs p-2 text-center break-all';
     ph.textContent = `${fig.dataset.picPath.split('/').pop()}\n(无法显示)`;
     fig.prepend(ph);
   };
@@ -249,8 +263,7 @@
       if (!toggle) return;
       const node = toggle.closest('.tree-node');
       if (toggle.dataset.loaded === 'true') {
-        const open = node.classList.toggle('open');
-        toggle.textContent = open ? '▾' : '▸';
+        node.classList.toggle('open');
         e.stopPropagation();
       }
     },
@@ -262,9 +275,7 @@
 
     if (target.classList && target.classList.contains('tree-children')) {
       const node = target.closest('.tree-node');
-      const toggle = node.querySelector('.tree-toggle');
-      toggle.dataset.loaded = 'true';
-      toggle.textContent = '▾';
+      node.querySelector('.tree-toggle').dataset.loaded = 'true';
       node.classList.add('open');
       return;
     }
@@ -324,16 +335,8 @@
     });
     $('#select-mode-button').addEventListener('click', () => {
       state.selectMode = !state.selectMode;
-      const btn = $('#select-mode-button');
-      btn.setAttribute('aria-pressed', String(state.selectMode));
-      for (const cls of [
-        'bg-blue-600',
-        'hover:bg-blue-700',
-        'text-white',
-        'border-blue-600',
-      ]) {
-        btn.classList.toggle(cls, state.selectMode);
-      }
+      $('#select-mode-button').classList.toggle('tinted', state.selectMode);
+      $('#select-mode-button').setAttribute('aria-pressed', String(state.selectMode));
     });
     $('#selected-button').addEventListener('click', () => {
       renderSelectedPanel();
@@ -344,6 +347,18 @@
       if (selected.size > 0) $('#cleanup-dialog').showModal();
     });
     $('#cleanup-cancel').addEventListener('click', () => $('#cleanup-dialog').close());
+
+    document.querySelectorAll('#theme-seg button').forEach((b) => {
+      b.addEventListener('click', () => {
+        localStorage.setItem('fotil-theme', b.dataset.theme);
+        applyTheme(b.dataset.theme);
+      });
+    });
+    // Follow live system theme changes while in auto mode.
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      applyTheme(themePref());
+    });
+    applyTheme(themePref());
 
     $('#lightbox-close').addEventListener('click', () => $('#lightbox').close());
     $('#lightbox-prev').addEventListener('click', () => navLightbox(-1));
