@@ -30,6 +30,11 @@ def write_raw(path: Path) -> None:
     path.write_bytes(b'raw-data')
 
 
+def write_big_pic(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new('RGB', (3000, 2000), 'green').save(path)
+
+
 @pytest.fixture
 def lib(tmp_path, monkeypatch):
     """Library with two date dirs of pics, matching raws and one raw orphan."""
@@ -155,6 +160,66 @@ def test_image_file_unknown_suffix_served_as_blob(lib):
     src, media_type = service.image_file(lib, '2024/05-01/d.jxl')
     assert src == jxl
     assert media_type == 'application/octet-stream'
+
+
+def test_image_file_thumb_transcodes_jpg(lib, monkeypatch):
+    """thumb serves a cached JPEG shrunk to the thumb cap, not the source."""
+    monkeypatch.setenv('FOTIL_TRANSCODER', 'pillow')
+    write_big_pic(lib.pic_dir / '2024/05-01/big.jpg')
+    src, media_type = service.image_file(lib, '2024/05-01/big.jpg', size='thumb')
+    assert media_type == 'image/jpeg'
+    assert src != lib.pic_dir / '2024/05-01/big.jpg'
+    assert src.is_relative_to(service.CACHE_DIR)
+    with Image.open(src) as im:
+        assert max(im.size) <= service.THUMB_MAX_SIZE[0]
+
+
+def test_image_file_variants_use_distinct_cache_files(lib, monkeypatch):
+    """thumb and large cache separately; no size still serves the original."""
+    monkeypatch.setenv('FOTIL_TRANSCODER', 'pillow')
+    write_big_pic(lib.pic_dir / '2024/05-01/big.jpg')
+    thumb, _ = service.image_file(lib, '2024/05-01/big.jpg', size='thumb')
+    large, _ = service.image_file(lib, '2024/05-01/big.jpg', size='large')
+    assert thumb != large
+    plain, _ = service.image_file(lib, '2024/05-01/big.jpg')
+    assert plain == lib.pic_dir / '2024/05-01/big.jpg'
+    assert len(list(service.CACHE_DIR.glob('*.jpg'))) == 2
+
+
+def test_image_file_heif_default_matches_large(lib, monkeypatch):
+    """Without size, HEIF serves the large variant (legacy compatibility)."""
+    monkeypatch.setenv('FOTIL_TRANSCODER', 'pillow')
+    default, _ = service.image_file(lib, '2024/05-01/b.hif')
+    large, _ = service.image_file(lib, '2024/05-01/b.hif', size='large')
+    assert default == large
+    thumb, _ = service.image_file(lib, '2024/05-01/b.hif', size='thumb')
+    assert thumb != default
+
+
+def test_image_file_thumb_flattens_png_alpha(lib, monkeypatch):
+    """RGBA PNGs transcode to an opaque JPEG instead of failing or blackening."""
+    monkeypatch.setenv('FOTIL_TRANSCODER', 'pillow')
+    png = lib.pic_dir / '2024/05-01/rgba.png'
+    png.parent.mkdir(parents=True, exist_ok=True)
+    Image.new('RGBA', (64, 48), (255, 0, 0, 128)).save(png)
+    src, media_type = service.image_file(lib, '2024/05-01/rgba.png', size='thumb')
+    assert media_type == 'image/jpeg'
+    assert src.read_bytes()[:2] == b'\xff\xd8'
+    with Image.open(src) as im:
+        assert im.mode == 'RGB'
+
+
+def test_image_file_unknown_suffix_ignores_size(lib):
+    jxl = lib.pic_dir / '2024/05-01/d.jxl'
+    jxl.write_bytes(b'jxl-data')
+    src, media_type = service.image_file(lib, '2024/05-01/d.jxl', size='thumb')
+    assert src == jxl
+    assert media_type == 'application/octet-stream'
+
+
+def test_image_file_unknown_size_raises(lib):
+    with pytest.raises(ValueError):
+        service.image_file(lib, '2024/05-01/a.jpg', size='bogus')
 
 
 def test_cleanup_moves_selected_pic_and_matching_raw(lib):

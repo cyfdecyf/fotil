@@ -27,14 +27,22 @@ class TranscodeError(Exception):
     """An image could not be transcoded for display."""
 
 
+# Cached result of scanning PATH for sips; None means "not scanned yet".
+# Only the which() result is cached, FOTIL_TRANSCODER is always read live.
+_sips_on_path: bool | None = None
+
+
 def _use_sips() -> bool:
     """Whether the sips backend should try first, honoring FOTIL_TRANSCODER."""
+    global _sips_on_path
     forced = os.environ.get('FOTIL_TRANSCODER', 'auto')
     if forced == 'sips':
         return True
     if forced == 'pillow':
         return False
-    return shutil.which('sips') is not None
+    if _sips_on_path is None:
+        _sips_on_path = shutil.which('sips') is not None
+    return _sips_on_path
 
 
 def transcode(
@@ -121,6 +129,13 @@ def _transcode_pillow(
     try:
         with Image.open(src) as im:
             im = ImageOps.exif_transpose(im)
+            if im.mode in ('RGBA', 'LA', 'P'):
+                # JPEG has no alpha; a plain convert('RGB') would turn
+                # semi-transparent pixels black. Flatten onto white.
+                im = im.convert('RGBA')
+                bg = Image.new('RGB', im.size, 'white')
+                bg.paste(im, mask=im.getchannel('A'))
+                im = bg
             im.thumbnail(max_size)
             im.convert('RGB').save(dst, 'JPEG', quality=quality)
     except Exception as exc:

@@ -151,6 +151,33 @@ def test_image_transcodes_hif(client):
     assert resp.content[:2] == b'\xff\xd8'  # JPEG magic, not HEIF
 
 
+def test_image_thumb_variant(client, monkeypatch):
+    """size=thumb serves a shrunken JPEG with an immutable cache header."""
+    monkeypatch.setenv('FOTIL_TRANSCODER', 'pillow')
+    big = client.pic_dir / '2024/05-01/big.jpg'
+    big.parent.mkdir(parents=True, exist_ok=True)
+    Image.new('RGB', (3000, 2000), 'green').save(big)
+    resp = client.get('/image?path=2024/05-01/big.jpg&size=thumb')
+    assert resp.status_code == 200
+    assert resp.headers['content-type'] == 'image/jpeg'
+    assert resp.headers['cache-control'] == 'private, max-age=31536000, immutable'
+    with Image.open(io.BytesIO(resp.content)) as im:
+        assert max(im.size) <= service.THUMB_MAX_SIZE[0]
+
+
+def test_image_cache_control_on_all_responses(client):
+    """Every /image response carries the immutable cache header."""
+    for query in ('path=2024/05-01/a.jpg', 'path=2024/05-01/b.hif&size=large'):
+        resp = client.get(f'/image?{query}')
+        assert resp.status_code == 200
+        assert resp.headers['cache-control'] == 'private, max-age=31536000, immutable'
+
+
+def test_image_unknown_size_is_400(client):
+    resp = client.get('/image?path=2024/05-01/a.jpg&size=bogus')
+    assert resp.status_code == 400
+
+
 def test_image_size_check_from_web_config(tmp_path, monkeypatch):
     """web.sips_size_check reaches the transcode: a small HEIF keeps size."""
     monkeypatch.setattr(service, 'CACHE_DIR', tmp_path / 'cache')

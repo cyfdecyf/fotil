@@ -112,13 +112,18 @@ def grid(
 
 @get('/image', sync_to_thread=True)
 def image(
-    request: Request, library: FromQuery[str | None] = None, path: FromQuery[str] = ''
+    request: Request,
+    library: FromQuery[str | None] = None,
+    path: FromQuery[str] = '',
+    size: FromQuery[str | None] = None,
 ) -> File:
     """Serve a picture, transcoding HEIF files to cached JPEG previews."""
     conf, lib_conf = _library(request, library)
+    if size is not None and size not in service.IMAGE_VARIANTS:
+        raise BadRequest(f'unknown image size {size!r}')
     try:
         src, media_type = service.image_file(
-            lib_conf, path, size_check=conf.web.sips_size_check
+            lib_conf, path, size=size, size_check=conf.web.sips_size_check
         )
     except InvalidPathError as exc:
         raise BadRequest(str(exc)) from exc
@@ -126,7 +131,14 @@ def image(
         raise NotFoundException(str(exc)) from exc
     except TranscodeError as exc:
         raise BadRequest(str(exc)) from exc
-    return File(path=src, media_type=media_type, content_disposition_type='inline')
+    # /image URLs are content-constant (photos are never edited in place),
+    # so browsers may cache responses forever without revalidating.
+    return File(
+        path=src,
+        media_type=media_type,
+        content_disposition_type='inline',
+        headers={'cache-control': 'private, max-age=31536000, immutable'},
+    )
 
 
 @post('/cleanup', status_code=200)

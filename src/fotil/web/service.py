@@ -21,11 +21,30 @@ BROWSER_SUFFIXES = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/
 # them reliably (HEIF/HIF).
 TRANSCODE_SUFFIXES = {'.hif', '.heic'}
 
-# Max preview size of transcoded images. Plenty for culling, much faster to
-# decode and transfer than full 33MP camera images.
+# "large" variant: max preview size of transcoded images. Plenty for
+# culling, much faster to decode and transfer than full 33MP camera images.
 TRANSCODE_MAX_SIZE = (2560, 2560)
 TRANSCODE_QUALITY = 85
+# "thumb" variant for the photo grid.
+THUMB_MAX_SIZE = (800, 800)
+THUMB_QUALITY = 80
 CACHE_DIR = Path('~/.cache/fotil/web').expanduser()
+
+# URL size value -> (max_size, quality, cache_key). The cache_key becomes
+# part of the on-disk cache filename, so changing size or quality rotates
+# the cache naturally instead of serving stale previews.
+IMAGE_VARIANTS = {
+    'thumb': (
+        THUMB_MAX_SIZE,
+        THUMB_QUALITY,
+        f'thumb-{THUMB_MAX_SIZE[0]}-{THUMB_QUALITY}',
+    ),
+    'large': (
+        TRANSCODE_MAX_SIZE,
+        TRANSCODE_QUALITY,
+        f'large-{TRANSCODE_MAX_SIZE[0]}-{TRANSCODE_QUALITY}',
+    ),
+}
 
 # Photos per grid chunk.
 PAGE_SIZE = 200
@@ -141,33 +160,37 @@ def _contained_pic_file(lib_conf: LibraryConfig, path_rel: str) -> Path:
     return src
 
 
-def transcode_cache_path(src: Path) -> Path:
+def transcode_cache_path(src: Path, variant: str) -> Path:
     """Cache file path for the transcoded preview of src.
 
-    The source mtime is part of the key, so edits invalidate the cache.
+    The source mtime and the variant cache_key are part of the key, so
+    edits invalidate the cache and variants never collide.
     """
-    stamp = f'{src}::{src.stat().st_mtime_ns}'
+    _, _, cache_key = IMAGE_VARIANTS[variant]
+    stamp = f'{src}::{src.stat().st_mtime_ns}::{cache_key}'
     key = hashlib.sha256(stamp.encode()).hexdigest()[:32]
     return CACHE_DIR / f'{key}.jpg'
 
 
-def ensure_transcode(src: Path, *, size_check: bool = False) -> Path:
-    """Transcode a HEIF image to a cached JPEG preview and return its path.
+def ensure_transcode(src: Path, variant: str, *, size_check: bool = False) -> Path:
+    """Transcode an image to a cached JPEG preview of the given variant.
 
     Args:
-        size_check: shrink only images larger than TRANSCODE_MAX_SIZE, see
-            transcode.transcode().
+        variant: An IMAGE_VARIANTS key ('thumb' or 'large').
+        size_check: shrink only images larger than the variant max size,
+            see transcode.transcode().
 
     Raises:
         TranscodeError: If the image cannot be decoded or written.
     """
-    dst = transcode_cache_path(src)
+    max_size, quality, _ = IMAGE_VARIANTS[variant]
+    dst = transcode_cache_path(src, variant)
     if dst.is_file():
         return dst
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     tmp = dst.with_name(f'.{dst.stem}.{id(dst)}.tmp')
     try:
-        transcode(src, tmp, TRANSCODE_MAX_SIZE, TRANSCODE_QUALITY, size_check=size_check)
+        transcode(src, tmp, max_size, quality, size_check=size_check)
         tmp.replace(dst)
     except OSError as exc:
         raise TranscodeError(f'failed to write {dst}: {exc}') from exc
@@ -177,20 +200,34 @@ def ensure_transcode(src: Path, *, size_check: bool = False) -> Path:
 
 
 def image_file(
-    lib_conf: LibraryConfig, path_rel: str, *, size_check: bool = False
+    lib_conf: LibraryConfig,
+    path_rel: str,
+    *,
+    size: str | None = None,
+    size_check: bool = False,
 ) -> tuple[Path, str]:
     """File to serve for a picture and its media type.
 
-    Browser-renderable files are served as-is, HEIF files are transcoded to
-    JPEG (cached) because browsers cannot display them, anything else is
-    served as an opaque blob for the UI to show a placeholder for.
+    With size given ('thumb' or 'large'), jpg/png and HEIF files alike are
+    transcoded to a cached JPEG of that variant. Without size, legacy
+    behavior applies: browser-renderable files are served as-is, HEIF
+    falls back to the large variant, anything else is served as an opaque
+    blob for the UI to show a placeholder for.
+
+    Raises:
+        InvalidPathError: If size is not a known variant.
     """
     src = _contained_pic_file(lib_conf, path_rel)
-    media_type = BROWSER_SUFFIXES.get(src.suffix.lower())
+    suffix = src.suffix.lower()
+    if size is not None and size not in IMAGE_VARIANTS:
+        raise InvalidPathError(f'unknown image size {size!r}')
+    if size is not None and (suffix in BROWSER_SUFFIXES or suffix in TRANSCODE_SUFFIXES):
+        return ensure_transcode(src, size, size_check=size_check), 'image/jpeg'
+    media_type = BROWSER_SUFFIXES.get(suffix)
     if media_type is not None:
         return src, media_type
-    if src.suffix.lower() in TRANSCODE_SUFFIXES:
-        return ensure_transcode(src, size_check=size_check), 'image/jpeg'
+    if suffix in TRANSCODE_SUFFIXES:
+        return ensure_transcode(src, 'large', size_check=size_check), 'image/jpeg'
     return src, 'application/octet-stream'
 
 
