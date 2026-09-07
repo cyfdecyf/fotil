@@ -522,7 +522,7 @@
   function boot() {
     rebuildCardIndex();
     $('#library-select').addEventListener('change', (e) => {
-      // Full reload so the whole page (tree, grid, trash path) switches.
+      // Full reload so the whole page (tree, grid, header info) switches.
       const url = new URL(location.href);
       url.searchParams.set('library', e.target.value);
       url.searchParams.delete('dir');

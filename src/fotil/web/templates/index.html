@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from '_icons.html' import house %}
+{% from '_icons.html' import house, info %}
 {% block title %}fotil · {{ library }}{% endblock %}
 {% block body %}
 <header class="flex items-center gap-3 px-4 h-12 shrink-0 bg-[var(--surface)] border-b border-[var(--separator)]">
@@ -9,7 +9,46 @@
     <option value="{{ name }}" {% if name == library %}selected{% endif %}>{{ name }}</option>
     {% endfor %}
   </select>
-  <span class="text-xs text-[var(--secondary)] truncate max-w-md" title="{{ trash_dir }}">trash: {{ trash_dir }}</span>
+  <div class="relative" x-data="{ open: false }"
+       @click.outside="open = false" @keydown.escape.window="open = false">
+    <button id="info-button"
+            class="w-7 h-7 rounded-full flex items-center justify-center text-[var(--secondary)] hover:bg-[var(--fill)]"
+            :class="{'bg-[var(--fill)]': open}"
+            :aria-expanded="open.toString()"
+            title="库信息" aria-label="库信息"
+            @click="open = !open">{{ info('w-[18px] h-[18px]') }}</button>
+    <div x-show="open" x-cloak x-transition.opacity.duration.150ms
+         class="absolute left-0 top-full mt-2 z-50 w-[30rem] max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--separator)] bg-[var(--surface)] shadow-xl p-5">
+      {% set dt_cls = 'w-20 shrink-0 text-[var(--secondary)]' %}
+      {% set dd_cls = 'min-w-0 break-all' %}
+      <dl class="text-sm space-y-2.5">
+        <div class="flex gap-3">
+          <dt class="{{ dt_cls }}">名称</dt>
+          <dd class="{{ dd_cls }} font-semibold">{{ library }}</dd>
+        </div>
+        <div class="flex gap-3">
+          <dt class="{{ dt_cls }}">照片目录</dt>
+          <dd class="{{ dd_cls }}">{{ lib.pic_dir }}</dd>
+        </div>
+        <div class="flex gap-3">
+          <dt class="{{ dt_cls }}">raw 目录</dt>
+          <dd class="{{ dd_cls }}">{{ lib.raw_dir }}</dd>
+        </div>
+        <div class="flex gap-3">
+          <dt class="{{ dt_cls }}">清理目录</dt>
+          <dd class="{{ dd_cls }}">{{ lib.trash_dir }}</dd>
+        </div>
+        <div class="flex gap-3">
+          <dt class="{{ dt_cls }}">照片后缀</dt>
+          <dd class="{{ dd_cls }}">{{ lib.pic_suffixes | join(' ') }}</dd>
+        </div>
+        <div class="flex gap-3">
+          <dt class="{{ dt_cls }}">raw 后缀</dt>
+          <dd class="{{ dd_cls }}">{{ lib.raw_suffixes | join(' ') }}</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
   <div class="ml-auto flex items-center gap-2">
     <div id="theme-seg" class="seg hidden md:flex" role="group" aria-label="主题">
       <button type="button" data-theme="auto" class="seg-on">自动</button>
@@ -46,7 +85,7 @@
   <h2 class="text-[17px] font-semibold mb-2">确认清理</h2>
   <p class="text-sm mb-2">
     将 <span class="font-semibold" x-text="$store.ui.selected.size">0</span> 张选中的照片移入
-    <code class="text-xs bg-[var(--fill)] px-1 rounded break-all">{{ trash_dir }}</code>,
+    <code class="text-xs bg-[var(--fill)] px-1 rounded break-all">{{ lib.trash_dir }}</code>,
     并把 raw 目录下同名的 raw 文件一并移入 trash。
   </p>
   <p class="text-xs text-[var(--secondary)] mb-4">文件只是移动到 trash,不会真正删除,可手工找回。</p>

@@ -71,7 +71,7 @@ def index(
     except InvalidPathError as exc:
         raise BadRequest(str(exc)) from exc
     ctx['libraries'] = sorted(conf.library)
-    ctx['trash_dir'] = str(lib_conf.trash_dir)
+    ctx['lib'] = lib_conf
     return Template(template_name='index.html', context=ctx)
 
 
