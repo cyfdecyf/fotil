@@ -93,9 +93,15 @@ class WebConfig(Struct):
             Pillow's never-upscale thumbnail behavior. Off by default: camera
             originals are always larger than the cap, so the unconditional
             shrink saves the probe.
+        cache_max_bytes (int): upper bound in bytes for the total size of the
+            transcode preview cache, enforced when the web server starts and
+            stops; the oldest cache files are deleted until the cache fits.
+            While the server runs the cache may temporarily exceed the bound.
+            0 disables the limit.
     """
 
     sips_size_check: bool = False
+    cache_max_bytes: int = 512 * 1024**2
 
 
 class Config(Struct):

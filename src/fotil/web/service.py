@@ -251,6 +251,39 @@ def ensure_transcode(src: Path, variant: str, *, size_check: bool = False) -> Pa
     return dst
 
 
+def prune_cache(max_bytes: int) -> None:
+    """Delete oldest cache files until the cache fits max_bytes.
+
+    Cache files are derived previews, not library files, so deleting them is
+    safe: pruned entries simply regenerate on demand. Called when the web
+    server starts and stops, never while requests are served; the *.jpg glob
+    ignores stray .tmp files from crashed runs. If max_bytes is smaller than
+    a single cache file, the cache can end up empty.
+    """
+    if max_bytes <= 0:
+        return
+    entries: list[tuple[int, int, Path]] = []  # (mtime_ns, size, path)
+    total = 0
+    for f in CACHE_DIR.glob('*.jpg'):
+        try:
+            st = f.stat()
+        except OSError:
+            continue
+        entries.append((st.st_mtime_ns, st.st_size, f))
+        total += st.st_size
+    if total <= max_bytes:
+        return
+    entries.sort()
+    for _, size, f in entries:
+        if total <= max_bytes:
+            break
+        try:
+            f.unlink()
+        except OSError:
+            continue
+        total -= size
+
+
 def image_file(
     lib_conf: LibraryConfig,
     path_rel: str,

@@ -1,6 +1,7 @@
 """Tests for the web UI filesystem service layer."""
 
 import io
+import os
 
 from pathlib import Path
 
@@ -33,6 +34,15 @@ def write_raw(path: Path) -> None:
 def write_big_pic(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     Image.new('RGB', (3000, 2000), 'green').save(path)
+
+
+def write_cache_file(name: str, size: int, mtime_ns: int) -> Path:
+    """Junk file in CACHE_DIR with an exact size and mtime, for prune tests."""
+    f = service.CACHE_DIR / name
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_bytes(b'x' * size)
+    os.utime(f, ns=(mtime_ns, mtime_ns))
+    return f
 
 
 @pytest.fixture(autouse=True)
@@ -218,6 +228,51 @@ def test_image_file_variants_use_distinct_cache_files(lib, monkeypatch):
     plain, _ = service.image_file(lib, '2024/05-01/big.jpg')
     assert plain == lib.pic_dir / '2024/05-01/big.jpg'
     assert len(list(service.CACHE_DIR.glob('*.jpg'))) == 2
+
+
+@pytest.fixture
+def cache(tmp_path, monkeypatch):
+    """Isolated CACHE_DIR for prune_cache tests."""
+    d = tmp_path / 'cache'
+    monkeypatch.setattr(service, 'CACHE_DIR', d)
+    return d
+
+
+def test_prune_cache_deletes_oldest_until_fits(cache):
+    old = write_cache_file('old.jpg', 1000, 1_000_000_000)
+    mid = write_cache_file('mid.jpg', 1000, 1_000_000_001)
+    new = write_cache_file('new.jpg', 1000, 1_000_000_002)
+    service.prune_cache(2500)
+    assert not old.exists()
+    assert mid.is_file()
+    assert new.is_file()
+
+
+def test_prune_cache_noop_cases(cache):
+    service.prune_cache(500)  # missing cache dir must not raise
+    old = write_cache_file('old.jpg', 1000, 1_000_000_000)
+    service.prune_cache(0)  # 0 disables the limit
+    assert old.is_file()
+    service.prune_cache(2000)  # already within the limit
+    assert old.is_file()
+
+
+def test_prune_cache_can_empty_cache_below_file_size(cache):
+    old = write_cache_file('old.jpg', 1000, 1_000_000_000)
+    new = write_cache_file('new.jpg', 1000, 1_000_000_001)
+    service.prune_cache(500)
+    assert not old.exists()
+    assert not new.exists()
+
+
+def test_prune_cache_ignores_non_cache_files(cache):
+    jpg = write_cache_file('old.jpg', 1000, 1_000_000_000)
+    stray_tmp = write_cache_file('.old.1234.tmp', 1000, 1_000_000_000)
+    note = write_cache_file('note.txt', 1000, 1_000_000_000)
+    service.prune_cache(1)  # only old.jpg counts, so it alone gets deleted
+    assert not jpg.exists()
+    assert stray_tmp.is_file()
+    assert note.is_file()
 
 
 def test_image_file_heif_default_matches_large(lib, monkeypatch):

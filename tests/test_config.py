@@ -25,9 +25,14 @@ def load(toml: str, tmp_path):
 
 
 def test_missing_web_section_gets_defaults(tmp_path):
-    assert load(BASE, tmp_path).web.sips_size_check is False
+    conf = load(BASE, tmp_path)
+    assert conf.web.sips_size_check is False
+    assert conf.web.cache_max_bytes == 512 * 1024**2
 
 
 def test_web_section_overrides_defaults(tmp_path):
-    conf = load(BASE + '\n[web]\nsips_size_check = true\n', tmp_path)
+    conf = load(
+        BASE + '\n[web]\nsips_size_check = true\ncache_max_bytes = 1000\n', tmp_path
+    )
     assert conf.web.sips_size_check is True
+    assert conf.web.cache_max_bytes == 1000

@@ -1,6 +1,7 @@
 """Tests for the web UI HTTP routes."""
 
 import io
+import os
 
 from pathlib import Path
 
@@ -195,6 +196,36 @@ def test_image_size_check_from_web_config(tmp_path, monkeypatch):
     assert resp.status_code == 200
     with Image.open(io.BytesIO(resp.content)) as im:
         assert im.size == (8, 6)
+
+
+def test_server_start_stop_prunes_cache_to_limit(tmp_path, monkeypatch):
+    """Server startup and shutdown prune the preview cache to the configured bound."""
+    cache = tmp_path / 'cache'
+    monkeypatch.setattr(service, 'CACHE_DIR', cache)
+    pic = tmp_path / 'pic'
+    write_pic(pic / '2024/05-01/a.jpg')
+    conf = tmp_path / 'fotil.toml'
+    conf.write_text(
+        CONFIG_TEMPLATE.format(pic=pic, raw=tmp_path / 'raw', trash=tmp_path / 'trash')
+        + '\n[web]\ncache_max_bytes = 1500\n'
+    )
+
+    def cache_jpg(name: str, mtime_ns: int) -> None:
+        f = cache / name
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(b'x' * 1000)
+        os.utime(f, ns=(mtime_ns, mtime_ns))
+
+    cache_jpg('old.jpg', 1_000_000_000)
+    cache_jpg('mid.jpg', 1_000_000_001)
+    with TestClient(app=create_app(conf)):
+        # Startup pruned the oldest file to fit the 1500 byte bound.
+        assert not (cache / 'old.jpg').exists()
+        assert (cache / 'mid.jpg').is_file()
+        # Cache growth while the server runs is pruned at shutdown.
+        cache_jpg('new.jpg', 1_000_000_002)
+    assert not (cache / 'mid.jpg').exists()
+    assert (cache / 'new.jpg').is_file()
 
 
 def test_image_rejects_escape_and_missing(client):
