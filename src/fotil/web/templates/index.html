@@ -87,14 +87,21 @@
 
 <dialog id="lightbox" class="m-0 p-0 w-screen h-screen max-w-none max-h-none bg-black/95 text-white">
   <div class="w-full h-full flex flex-col">
-    <header class="flex items-center gap-3 px-4 h-12 shrink-0">
-      <span id="lightbox-name" class="text-sm font-medium truncate"
-            x-text="$store.ui.lbPath ? $store.ui.lbPath.split('/').pop() : ''"></span>
-      <span id="lightbox-pos" class="text-xs text-white/50 shrink-0" x-text="$store.ui.lbPos()"></span>
-      <span id="lightbox-marked" class="text-xs font-semibold bg-[var(--danger)] text-white rounded-full px-2.5 py-1 shrink-0"
-            x-show="$store.ui.has($store.ui.lbPath)">已标记删除</span>
-      <span class="ml-auto text-xs text-white/40 shrink-0 hidden lg:inline">←→ 切换 · 空格 返回 · f 缩放 · d/u 标记 · ? 全部键位</span>
-      <button id="lightbox-close" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/80 text-lg leading-none shrink-0" title="关闭 (Esc)">×</button>
+    <header class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 h-12 shrink-0">
+      <div class="min-w-0">
+        <div id="lightbox-name" class="text-sm font-medium truncate"
+             x-text="$store.ui.lbPath ? $store.ui.lbPath.split('/').pop() : ''"></div>
+        <div id="lightbox-exif" class="text-xs text-white/50 truncate"
+             x-show="$store.ui.lbExif && $store.ui.lbExif.length"
+             x-text="($store.ui.lbExif || []).join(' · ')"></div>
+      </div>
+      <span id="lightbox-pos" class="text-xs text-white/50 text-center" x-text="$store.ui.lbPos()"></span>
+      <div class="flex items-center justify-end gap-3 min-w-0">
+        <span id="lightbox-marked" class="text-xs font-semibold bg-[var(--danger)] text-white rounded-full px-2.5 py-1 shrink-0"
+              x-show="$store.ui.has($store.ui.lbPath)">已标记删除</span>
+        <span class="text-xs text-white/40 shrink-0 hidden lg:inline">←→ 切换 · 空格 返回 · f 缩放 · d/u 标记 · ? 全部键位</span>
+        <button id="lightbox-close" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/80 text-lg leading-none shrink-0" title="关闭 (Esc)">×</button>
+      </div>
     </header>
     <div id="lightbox-stage" class="flex-1 min-h-0 relative">
       <div id="lightbox-scroll" class="w-full h-full overflow-hidden flex items-center justify-center">

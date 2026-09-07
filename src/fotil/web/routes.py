@@ -144,6 +144,22 @@ def image(
     )
 
 
+@get('/exif', sync_to_thread=True)
+def exif(
+    request: Request,
+    library: FromQuery[str | None] = None,
+    path: FromQuery[str] = '',
+) -> dict[str, list[str]]:
+    """Display-ready EXIF segments for one picture, for the lightbox header."""
+    _, lib_conf = _library(request, library)
+    try:
+        return {'exif': service.pic_exif(lib_conf, path)}
+    except InvalidPathError as exc:
+        raise BadRequest(str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise NotFoundException(str(exc)) from exc
+
+
 @post('/cleanup', status_code=200, sync_to_thread=True)
 def cleanup(
     request: Request,

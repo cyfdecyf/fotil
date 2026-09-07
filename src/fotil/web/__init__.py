@@ -10,7 +10,7 @@ from litestar.template import TemplateConfig
 from fotil.config import load_config
 
 from . import service
-from .routes import cleanup, grid, image, index, tree
+from .routes import cleanup, exif, grid, image, index, tree
 
 
 def create_app(config_path: Path) -> Litestar:
@@ -33,6 +33,7 @@ def create_app(config_path: Path) -> Litestar:
             tree,
             grid,
             image,
+            exif,
             cleanup,
             create_static_files_router(path='/static', directories=[web_dir / 'static']),
         ],

@@ -5,6 +5,8 @@ All user supplied paths are validated to stay inside the library directories.
 """
 
 import hashlib
+import json
+import subprocess
 import threading
 
 from collections import OrderedDict
@@ -13,6 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from fotil.config import Config, LibraryConfig
+from fotil.exiftool import Exiftool
 from fotil.fs import iter_directory_files
 from fotil.web.transcode import TranscodeError, transcode
 
@@ -97,38 +100,39 @@ def _contained_dir(root: Path, dir_rel: str) -> Path:
     return target
 
 
-# Directory listing cache: (resolved dir, kind) -> (dir mtime_ns, value).
-# A directory's mtime_ns changes whenever its direct entries are added,
-# removed or renamed, which is exactly what the name-only listings depend
-# on; editing file contents leaves it untouched.
-_listings: OrderedDict[tuple[Path, str], tuple[int, object]] = OrderedDict()
-_listings_lock = threading.Lock()
-_LISTINGS_MAX = 256
+# Path value cache: (resolved path, kind) -> (path mtime_ns, value). Works
+# for both directory listings and per-file values: a directory's mtime_ns
+# changes whenever its direct entries are added, removed or renamed, and a
+# file's mtime_ns changes whenever the file itself is rewritten, which is
+# exactly what the cached values depend on.
+_values: OrderedDict[tuple[Path, str], tuple[int, object]] = OrderedDict()
+_values_lock = threading.Lock()
+_VALUES_MAX = 512
 
 
-def _cached_listing[T](directory: Path, kind: str, compute: Callable[[], T]) -> T:
-    """Return compute() cached by directory's mtime; a changed mtime invalidates.
+def _cached_value[T](path: Path, kind: str, compute: Callable[[], T]) -> T:
+    """Return compute() cached by path's mtime; a changed mtime invalidates.
 
-    Keys pair the resolved directory path (as returned by _contained_dir)
-    with a kind tag, so a directory holds one entry per computed value kind.
-    compute() runs outside the lock; under thread races the worst case is a
-    wasted recompute.
+    Keys pair the resolved path (as returned by _contained_dir or
+    _contained_pic_file) with a kind tag, so one path holds one entry per
+    computed value kind. compute() runs outside the lock; under thread races
+    the worst case is a wasted recompute.
     """
-    key = (directory, kind)
+    key = (path, kind)
     try:
-        mtime = directory.stat().st_mtime_ns
+        mtime = path.stat().st_mtime_ns
     except OSError:
         return compute()
-    with _listings_lock:
-        hit = _listings.get(key)
+    with _values_lock:
+        hit = _values.get(key)
         if hit is not None and hit[0] == mtime:
-            _listings.move_to_end(key)
+            _values.move_to_end(key)
             return hit[1]
     value = compute()
-    with _listings_lock:
-        _listings[key] = (mtime, value)
-        while len(_listings) > _LISTINGS_MAX:
-            _listings.popitem(last=False)
+    with _values_lock:
+        _values[key] = (mtime, value)
+        while len(_values) > _VALUES_MAX:
+            _values.popitem(last=False)
     return value
 
 
@@ -141,7 +145,7 @@ def _subdir_names(directory: Path) -> list[str]:
 
 def _has_subdirs(directory: Path) -> bool:
     """Whether directory contains any non-hidden subdirectory."""
-    return bool(_cached_listing(directory, 'dirs', lambda: _subdir_names(directory)))
+    return bool(_cached_value(directory, 'dirs', lambda: _subdir_names(directory)))
 
 
 def _pic_listing(lib_conf: LibraryConfig, directory: Path) -> tuple[list[Path], int]:
@@ -159,7 +163,7 @@ def list_subdirs(lib_conf: LibraryConfig, dir_rel: str = '') -> list[str]:
     directory = _contained_dir(lib_conf.pic_dir, dir_rel)
     if not directory.is_dir():
         return []
-    return _cached_listing(directory, 'dirs', lambda: _subdir_names(directory))
+    return _cached_value(directory, 'dirs', lambda: _subdir_names(directory))
 
 
 def list_subdirs_details(lib_conf: LibraryConfig, dir_rel: str = '') -> list[dict]:
@@ -171,7 +175,7 @@ def list_subdirs_details(lib_conf: LibraryConfig, dir_rel: str = '') -> list[dic
     directory = _contained_dir(lib_conf.pic_dir, dir_rel)
     if not directory.is_dir():
         return []
-    names = _cached_listing(directory, 'dirs', lambda: _subdir_names(directory))
+    names = _cached_value(directory, 'dirs', lambda: _subdir_names(directory))
     return [
         {'name': name, 'has_children': _has_subdirs(directory / name)} for name in names
     ]
@@ -188,7 +192,7 @@ def list_pics(
     directory = _contained_dir(lib_conf.pic_dir, dir_rel)
     if not directory.is_dir():
         return [], 0
-    files, total = _cached_listing(
+    files, total = _cached_value(
         directory, 'files', lambda: _pic_listing(lib_conf, directory)
     )
     return files[offset : offset + limit], total
@@ -314,6 +318,86 @@ def image_file(
     if suffix in TRANSCODE_SUFFIXES:
         return ensure_transcode(src, 'large', size_check=size_check), 'image/jpeg'
     return src, 'application/octet-stream'
+
+
+# EXIF tags shown in the lightbox header, in display order. exiftool reads
+# them with -n, so numeric tags come back as plain numbers ('FNumber': 2.8).
+EXIF_DISPLAY_TAGS = [
+    'ISO',
+    'FNumber',
+    'ExposureTime',
+    'FocalLength',
+    'FocalLengthIn35mmFormat',
+    'LensModel',
+    'Model',
+]
+
+
+def pic_exif(lib_conf: LibraryConfig, path_rel: str) -> list[str]:
+    """Display-ready EXIF segments for one picture, in fixed order.
+
+    Returns an empty list when the file carries none of the display tags,
+    or when exiftool is unavailable, so the UI can simply hide the line.
+    """
+    src = _contained_pic_file(lib_conf, path_rel)
+    return _cached_value(src, 'exif', lambda: _read_exif(src))
+
+
+def _read_exif(src: Path) -> list[str]:
+    """Run exiftool on one picture and format its display segments."""
+    try:
+        records = Exiftool().read([src], tags=EXIF_DISPLAY_TAGS)
+    except (
+        OSError,  # includes the missing-exiftool-binary FileNotFoundError
+        json.JSONDecodeError,
+        subprocess.CalledProcessError,
+    ):
+        return []
+    return _format_exif(records[0]) if records else []
+
+
+def _format_exif(exif: dict[str, str]) -> list[str]:
+    """Turn one exiftool record into ordered, human-readable segments."""
+    segments = []
+    if 'ISO' in exif:
+        segments.append(f'ISO {_exif_num(exif["ISO"])}')
+    if 'FNumber' in exif:
+        segments.append(f'f/{_exif_num(exif["FNumber"])}')
+    if 'ExposureTime' in exif:
+        segments.append(_exif_shutter(exif['ExposureTime']))
+    if 'FocalLength' in exif:
+        focal_length = _exif_num(exif['FocalLength'])
+        focal = f'{focal_length}mm'
+        if 'FocalLengthIn35mmFormat' in exif:
+            equivalent = _exif_num(exif['FocalLengthIn35mmFormat'])
+            if equivalent != focal_length:
+                focal += f' (eq. {equivalent}mm)'
+        segments.append(focal)
+    for tag in ('LensModel', 'Model'):
+        if exif.get(tag):
+            segments.append(exif[tag])
+    return segments
+
+
+def _exif_num(value: str) -> str:
+    """Trim a numeric exiftool value, so '24.0' and '24' both show as '24'."""
+    try:
+        return f'{float(value):g}'
+    except ValueError:
+        return value
+
+
+def _exif_shutter(value: str) -> str:
+    """Format an exposure time as '1/250s' or, for slow shutters, '0.5s'."""
+    try:
+        sec = float(value)
+    except ValueError:
+        return value
+    if sec <= 0:
+        return value
+    if sec >= 0.25:
+        return f'{sec:g}s'
+    return f'1/{round(1 / sec)}s'
 
 
 @dataclass

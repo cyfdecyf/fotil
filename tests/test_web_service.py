@@ -47,8 +47,8 @@ def write_cache_file(name: str, size: int, mtime_ns: int) -> Path:
 
 @pytest.fixture(autouse=True)
 def clear_listing_cache():
-    """The module-level listing cache must not leak between tests."""
-    service._listings.clear()
+    """The module-level path value cache must not leak between tests."""
+    service._values.clear()
     yield
 
 

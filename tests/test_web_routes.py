@@ -2,6 +2,7 @@
 
 import io
 import os
+import shutil
 
 from pathlib import Path
 
@@ -11,6 +12,7 @@ import pytest
 from litestar.testing import TestClient
 from PIL import Image
 
+from fotil.exiftool import Exiftool
 from fotil.web import create_app, service
 
 
@@ -231,6 +233,47 @@ def test_server_start_stop_prunes_cache_to_limit(tmp_path, monkeypatch):
 def test_image_rejects_escape_and_missing(client):
     assert client.get('/image?path=../outside.jpg').status_code == 400
     assert client.get('/image?path=2024/05-01/gone.jpg').status_code == 404
+
+
+@pytest.mark.skipif(shutil.which('exiftool') is None, reason='exiftool not in PATH')
+def test_exif_returns_display_segments(client):
+    target = client.pic_dir / '2024/05-01/a.jpg'
+    Exiftool().write(
+        [target],
+        {
+            'ISO': '400',
+            'FNumber': '4',
+            'ExposureTime': '1/250',
+            'FocalLength': '24',
+            'FocalLengthIn35mmFormat': '36',
+            'LensModel': 'Test Lens 24mm',
+            'Model': 'Test Body',
+        },
+        overwrite_original=True,
+    )
+    resp = client.get('/exif?library=main&path=2024/05-01/a.jpg')
+    assert resp.status_code == 200
+    assert resp.json() == {
+        'exif': [
+            'ISO 400',
+            'f/4',
+            '1/250s',
+            '24mm (eq. 36mm)',
+            'Test Lens 24mm',
+            'Test Body',
+        ]
+    }
+
+
+def test_exif_without_metadata_is_empty(client):
+    resp = client.get('/exif?library=main&path=2024/05-01/b.hif')
+    assert resp.status_code == 200
+    assert resp.json() == {'exif': []}
+
+
+def test_exif_rejects_escape_and_missing(client):
+    assert client.get('/exif?path=../outside.jpg').status_code == 400
+    assert client.get('/exif?path=2024/05-01/gone.jpg').status_code == 404
 
 
 def test_cleanup_moves_files_and_sets_refresh_header(client):

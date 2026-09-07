@@ -45,6 +45,9 @@
       // list. The 1:1 zoom stays imperative (see setZoom).
       lbPath: null,
       lbIndex: 0,
+      // EXIF segments for the lightbox picture, fetched from /exif and
+      // filled in by showInLightbox; null while loading or unavailable.
+      lbExif: null,
 
       has(p) {
         return p != null && this.selected.has(p);
@@ -183,12 +186,39 @@
     }
   }
 
+  // Display segments per path, cached across opens so flipping back and
+  // forth does not refetch. Bounded by dropping everything once full: the
+  // data is tiny and the server keeps its own per-file cache anyway.
+  const exifCache = new Map();
+  const EXIF_CACHE_MAX = 500;
+
+  async function loadExif(path) {
+    let items = exifCache.get(path);
+    if (items !== undefined) return items;
+    items = [];
+    try {
+      const url = `/exif?library=${encodeURIComponent(ui().library)}&path=${encodeURIComponent(path)}`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data.exif)) items = data.exif;
+      }
+    } catch {
+      // A failed fetch just leaves the EXIF line hidden.
+    }
+    if (exifCache.size >= EXIF_CACHE_MAX) exifCache.clear();
+    exifCache.set(path, items);
+    return items;
+  }
+
   // Point the lightbox at a path: store updates drive the template
-  // bindings (image src, name, counter, prev/next, mark badge); only the
-  // zoom reset and neighbour preloading stay imperative.
+  // bindings (image src, name, exif line, counter, prev/next, mark badge);
+  // only the zoom reset, neighbour preloading and the EXIF fetch stay
+  // imperative.
   function showInLightbox(path) {
     if (!path) return;
     ui().lbPath = path;
+    ui().lbExif = exifCache.get(path) ?? null;
     setZoom(false);
     // Preload neighbours so flipping through feels instant.
     const paths = gridPaths();
@@ -196,8 +226,13 @@
     for (const i of [idx - 1, idx + 1]) {
       if (paths[i]) {
         new Image().src = ui().picUrl(paths[i]);
+        loadExif(paths[i]);
       }
     }
+    loadExif(path).then((items) => {
+      // Drop the response if the user already moved on to another picture.
+      if (ui().lbPath === path) ui().lbExif = items.length ? items : null;
+    });
   }
 
   function openLightbox(path) {
