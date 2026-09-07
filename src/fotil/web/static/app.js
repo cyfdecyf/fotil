@@ -26,6 +26,17 @@
 
   const hasMore = () => !!document.getElementById('load-more');
 
+  // Mirror the grid totals into the store so lightbox bindings that show
+  // them stay reactive. Called after Alpine is up wherever the card index
+  // was (re)built; the boot-time rebuild is picked up by the alpine:init
+  // seeding below.
+  function syncGridTotals() {
+    const st = ui();
+    if (!st) return;
+    st.cardTotal = cardPaths.length;
+    st.gridHasMore = hasMore();
+  }
+
   // Registered on `alpine:init`; app.js loads before alpine.min.js (both
   // deferred) so the listener is in place before Alpine boots. Seeding
   // library/dir here (rather than in boot) means the tree-link bindings are
@@ -48,6 +59,12 @@
       // EXIF segments for the lightbox picture, fetched from /exif and
       // filled in by showInLightbox; null while loading or unavailable.
       lbExif: null,
+      // Grid totals, mirrored here because Alpine cannot track the live DOM
+      // that gridPaths()/hasMore() read. Refreshed wherever the card index
+      // is rebuilt, so lbPos/lbAtEnd recompute after every grid swap even
+      // when lbIndex itself is unchanged.
+      cardTotal: 0,
+      gridHasMore: false,
 
       has(p) {
         return p != null && this.selected.has(p);
@@ -58,16 +75,17 @@
       picUrl(p) {
         return `/image?library=${encodeURIComponent(this.library)}&path=${encodeURIComponent(p)}&size=large`;
       },
-      // The next three read the live DOM for totals; they re-evaluate when
-      // lbIndex changes, which covers every path that swaps grid content.
+      // lbPos/lbAtEnd read the reactive cardTotal/gridHasMore mirrors above;
+      // reading the live DOM directly would leave their bindings stale after
+      // a grid swap that does not move lbIndex.
       lbPos() {
-        return `${this.lbIndex + 1} / ${gridPaths().length}${hasMore() ? '+' : ''}`;
+        return `${this.lbIndex + 1} / ${this.cardTotal}${this.gridHasMore ? '+' : ''}`;
       },
       lbAtStart() {
         return this.lbIndex <= 0;
       },
       lbAtEnd() {
-        return this.lbIndex >= gridPaths().length - 1 && !hasMore();
+        return this.lbIndex >= this.cardTotal - 1 && !this.gridHasMore;
       },
     });
     const grid = $('#grid-root');
@@ -75,6 +93,7 @@
       const st = Alpine.store('ui');
       st.library = grid.dataset.library;
       st.dir = grid.dataset.dir;
+      syncGridTotals();
     }
   });
 
@@ -475,6 +494,7 @@
       st.library = grid.dataset.library;
       st.dir = grid.dataset.dir;
       rebuildCardIndex();
+      syncGridTotals();
       for (const [path, el] of cardEls) {
         el.classList.toggle('selected', st.selected.has(path));
       }

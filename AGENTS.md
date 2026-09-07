@@ -35,6 +35,7 @@ uv run pytest tests/test_web_routes.py -k cleanup   # 按名筛选
 uv run ruff check --fix .            # lint（规则见 ruff.toml）
 uv run ruff format .                 # 格式化
 uv run fotil -h                      # 运行 CLI（需 exiftool 在 PATH）
+uv run fotil web                     # 启动 web 服务
 ```
 
 无独立 typechecker。Python 要求 >=3.14。
