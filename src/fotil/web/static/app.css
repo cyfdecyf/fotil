@@ -383,21 +383,78 @@ a.crumb:hover {
   background: var(--secondary);
 }
 
-/* Lightbox 1:1 zoom: only the inner scroll layer scrolls, so the nav
-   buttons stay pinned to the screen. */
-#lightbox-img {
-  cursor: zoom-in;
+/* Lightbox picture slots: two stacked <img>s so switching cross-fades —
+   the new picture decodes into the hidden slot, then fades in while the
+   outgoing one fades out (contain-fit boxes of different aspect ratios do
+   not cover each other, so a fully opaque underlay would keep peeking
+   out). The visible slot carries .lb-top so it paints above the fading
+   one. */
+#lightbox-scroll {
+  display: grid;
+  /* Definite tracks: percentage max-width/max-height on the imgs resolve
+     against the grid area, which is indefinite with auto rows. */
+  grid-template-columns: 100%;
+  grid-template-rows: 100%;
+  place-items: center;
 }
+#lightbox-scroll img {
+  grid-area: 1 / 1;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: zoom-in;
+  transition: opacity 0.16s ease-out;
+  /* Only the visible slot takes clicks; a faded-out slot must not swallow
+     the dark-area click that closes the lightbox. */
+  pointer-events: none;
+}
+#lightbox-scroll img.lb-top {
+  z-index: 1;
+  pointer-events: auto;
+}
+#lightbox-scroll img.lb-under {
+  opacity: 0;
+}
+#lightbox-scroll img.lb-loading {
+  opacity: 0;
+  transition: none;
+}
+
+/* Shown while a picture is being fetched and decoded. */
+#lightbox-loading {
+  position: absolute;
+  bottom: 2.5rem;
+  left: calc(50% - 0.625rem);
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid rgb(255 255 255 / 25%);
+  border-top-color: rgb(255 255 255 / 80%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: lb-spin 0.8s linear infinite;
+}
+@keyframes lb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Lightbox 1:1 zoom: only the inner scroll layer scrolls, so the nav
+   buttons stay pinned to the screen. The hidden cross-fade slot is taken
+   out of flow so the zoomed picture is the only scrollable content. */
 #lightbox-stage.zoomed #lightbox-scroll {
   display: block;
   overflow: auto;
 }
-#lightbox-stage.zoomed #lightbox-img {
+#lightbox-stage.zoomed #lightbox-scroll img {
   display: block;
   max-width: none;
   max-height: none;
   margin: 0 auto;
   cursor: zoom-out;
+}
+#lightbox-stage.zoomed #lightbox-scroll img:not(.lb-top) {
+  display: none;
 }
 
 /* Keyboard keys in the cheat sheet. */

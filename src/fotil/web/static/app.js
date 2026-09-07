@@ -230,15 +230,119 @@
     return items;
   }
 
+  // Cross-fade picture swapping. The new picture decodes into the hidden
+  // slot, then fades in over the outgoing one; a monotonically increasing
+  // token discards results for pictures the user already flipped past.
+  let lbVisible = null;
+  let lbPending = null;
+  let lbSwapToken = 0;
+  let lbShownUrl = null;
+  let lbSpinnerTimer = 0;
+
+  const lbLayers = () => [lbVisible, lbPending];
+
+  // Wait until the picture can be shown. A picture that is already in
+  // cache resolves right away; a fetched one settles on load, with
+  // decode() preferred so the fade never reveals a half-decoded frame.
+  // decode() is best-effort only: some WebKit builds never settle it and
+  // older engines lack it, so cap the wait and fade anyway.
+  function lbWhenReady(img) {
+    return new Promise((resolve, reject) => {
+      const settle = (ok) => {
+        img.removeEventListener('load', onLoad);
+        img.removeEventListener('error', onError);
+        ok ? resolve() : reject(new Error('picture failed to load'));
+      };
+      const onLoad = () => {
+        if (!img.decode) return settle(true);
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          settle(true);
+        };
+        img.decode().then(finish, finish);
+        setTimeout(finish, 200);
+      };
+      const onError = () => settle(false);
+      img.addEventListener('load', onLoad);
+      img.addEventListener('error', onError);
+      // A cached picture may already be complete; its events never fire.
+      if (img.complete) img.naturalWidth > 0 ? settle(true) : onError();
+    });
+  }
+
+  function setLightboxImage(url) {
+    if (!url || url === lbShownUrl) return;
+    lbShownUrl = url;
+    const token = ++lbSwapToken;
+    const layer = lbPending;
+    layer.classList.add('lb-loading');
+    layer.src = url;
+    // Only surface the spinner when the fetch actually takes a while, so
+    // swapping to a cached neighbour never flashes it.
+    clearTimeout(lbSpinnerTimer);
+    lbSpinnerTimer = setTimeout(
+      () => $('#lightbox-loading').classList.remove('hidden'),
+      400,
+    );
+    lbWhenReady(layer)
+      .then(() => {
+        if (token !== lbSwapToken) return;
+        clearTimeout(lbSpinnerTimer);
+        $('#lightbox-loading').classList.add('hidden');
+        $('#lightbox-fallback').classList.add('hidden');
+        // The slot has been sitting at opacity 0 with the transition
+        // disabled since the load started, so restoring the transition and
+        // fading in is safe without waiting for a style recalc. The
+        // outgoing picture fades out underneath: contain-fit boxes do not
+        // cover each other across aspect ratios, and a fully opaque
+        // underlay would keep the previous picture visible on screen.
+        layer.classList.remove('lb-loading', 'lb-under');
+        layer.classList.add('lb-top');
+        lbVisible.classList.remove('lb-top');
+        lbVisible.classList.add('lb-under');
+        [lbVisible, lbPending] = [lbPending, lbVisible];
+      })
+      .catch(() => {
+        if (token !== lbSwapToken) return;
+        clearTimeout(lbSpinnerTimer);
+        $('#lightbox-loading').classList.add('hidden');
+        for (const img of lbLayers()) img.classList.add('lb-loading');
+        const fb = $('#lightbox-fallback');
+        fb.textContent = `${(ui().lbPath || '').split('/').pop()}\n(无法显示)`;
+        fb.classList.remove('hidden');
+      });
+  }
+
+  // Drop decoded pictures and restore the initial slot roles, so reopening
+  // the lightbox on another picture cannot flash the stale frame.
+  function resetLightboxLayers() {
+    lbSwapToken++;
+    clearTimeout(lbSpinnerTimer);
+    lbShownUrl = null;
+    $('#lightbox-loading').classList.add('hidden');
+    $('#lightbox-fallback').classList.add('hidden');
+    lbVisible = $('#lightbox-img');
+    lbPending = $('#lightbox-img-back');
+    for (const img of lbLayers()) {
+      img.removeAttribute('src');
+      img.classList.remove('lb-loading', 'lb-under');
+    }
+    lbVisible.classList.add('lb-top');
+    lbPending.classList.remove('lb-top');
+  }
+
   // Point the lightbox at a path: store updates drive the template
-  // bindings (image src, name, exif line, counter, prev/next, mark badge);
-  // only the zoom reset, neighbour preloading and the EXIF fetch stay
+  // bindings (name, exif line, counter, prev/next, mark badge); only the
+  // picture swap, zoom reset, neighbour preloading and the EXIF fetch stay
   // imperative.
   function showInLightbox(path) {
     if (!path) return;
     ui().lbPath = path;
     ui().lbExif = exifCache.get(path) ?? null;
     setZoom(false);
+    setLightboxImage(ui().picUrl(path));
     // Preload neighbours so flipping through feels instant.
     const paths = gridPaths();
     const idx = paths.indexOf(path);
@@ -583,17 +687,12 @@
         closeLightbox();
       }
     });
-    $('#lightbox-img').addEventListener('click', () => setZoom(!zoomed));
-    const lbImg = $('#lightbox-img');
-    lbImg.addEventListener('error', () => {
-      lbImg.style.display = 'none';
-      const fb = $('#lightbox-fallback');
-      fb.textContent = `${(ui().lbPath || '').split('/').pop()}\n(无法显示)`;
-      fb.classList.remove('hidden');
-    });
-    lbImg.addEventListener('load', () => {
-      lbImg.style.display = '';
-      $('#lightbox-fallback').classList.add('hidden');
+    lbVisible = $('#lightbox-img');
+    lbPending = $('#lightbox-img-back');
+    // Either picture slot may be the visible one; clicking the picture
+    // toggles 1:1 zoom.
+    $('#lightbox-scroll').addEventListener('click', (e) => {
+      if (e.target.tagName === 'IMG') setZoom(!zoomed);
     });
     // The `close` event does not fire in some WebViews; this is only a
     // safety net for close paths outside the ones handled explicitly.
@@ -601,6 +700,7 @@
       setZoom(false);
       const path = gridPaths()[ui().lbIndex];
       if (path) setCursor(path);
+      resetLightboxLayers();
     });
 
     $('#help-close').addEventListener('click', () => $('#help-dialog').close());

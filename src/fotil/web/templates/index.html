@@ -143,10 +143,11 @@
       </div>
     </header>
     <div id="lightbox-stage" class="flex-1 min-h-0 relative">
-      <div id="lightbox-scroll" class="w-full h-full overflow-hidden flex items-center justify-center">
-        <img id="lightbox-img" class="max-w-full max-h-full object-contain" alt="" decoding="async"
-             :src="$store.ui.lbPath && $store.ui.picUrl($store.ui.lbPath)">
+      <div id="lightbox-scroll" class="w-full h-full overflow-hidden">
+        <img id="lightbox-img" class="lb-top" alt="" decoding="async">
+        <img id="lightbox-img-back" alt="" decoding="async">
       </div>
+      <div id="lightbox-loading" class="hidden"></div>
       <div id="lightbox-fallback" class="hidden absolute inset-0 flex items-center justify-center text-white/50 whitespace-pre text-center"></div>
       <button id="lightbox-prev" class="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl leading-none pb-0.5 flex items-center justify-center"
               :disabled="$store.ui.lbAtStart()" title="上一张 (←)">‹</button>
