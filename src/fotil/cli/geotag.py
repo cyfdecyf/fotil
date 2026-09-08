@@ -20,7 +20,7 @@ from fotil.exiftool import (
     Exiftool,
 )
 
-from . import cli_options
+from . import FotilApp, cli_options
 
 
 # Camera model tags mapping
@@ -445,10 +445,10 @@ def _get_tag_file() -> Path:
 
 # ---- CLI commands ----
 
-app = typer.Typer(help='Geotagging operations.')
+app = FotilApp(help='Geotagging operations.')
 
 
-@app.command(name='shift')
+@app.command(name='shift', no_args_is_help=True)
 def shift_time(
     fpaths: Annotated[list[Path], typer.Argument(help='Files to shift time')],
     time_shift: Annotated[
@@ -483,7 +483,7 @@ def shift_time(
     _shift_all_time_tags(exif, fpaths, time_shift)
 
 
-@app.command()
+@app.command(no_args_is_help=True)
 def copy_time(
     src: Annotated[Path, typer.Argument(help='Source file')],
     dst_paths: Annotated[list[Path], typer.Argument(help='Destination files')],
@@ -594,7 +594,7 @@ def copy_time(
         _shift_all_time_tags(exif, dst_paths, time_shift)
 
 
-@app.command()
+@app.command(no_args_is_help=True)
 def copy_gps(
     src: Annotated[Path, typer.Argument(help='Source file with GPS')],
     dst_paths: Annotated[list[Path], typer.Argument(help='Destination files')],
@@ -646,7 +646,7 @@ def copy_gps(
         print(f'add GPS tag for video file {dst_fname}')
 
 
-@app.command(name='image')
+@app.command(name='image', no_args_is_help=True)
 def image(
     fpaths: Annotated[
         list[Path],
@@ -685,7 +685,7 @@ def image(
     exif.geotag(fpaths, gpslog_paths, overwrite_original=overwrite_original)
 
 
-@app.command(name='video')
+@app.command(name='video', no_args_is_help=True)
 def video(
     fpaths: Annotated[
         list[Path],
@@ -803,7 +803,7 @@ def video(
         _write_video_creation_date(exif, vfile, tz_hour)
 
 
-@app.command(name='camera')
+@app.command(name='camera', no_args_is_help=True)
 def make_model(
     fpaths: Annotated[
         list[Path], typer.Option('--fpath', '-f', help='Files or directories')

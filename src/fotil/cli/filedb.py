@@ -5,10 +5,10 @@ import typer
 from fotil import filedb
 from fotil.config import ImportConfig
 
-from . import cli_options, get_config
+from . import FotilApp, cli_options, get_config
 
 
-app = typer.Typer(help='Manage file database.')
+app = FotilApp(help='Manage file database.')
 
 
 def _scan_one(import_conf: ImportConfig):

@@ -5,18 +5,13 @@ import typer
 
 from fotil.library import Library
 
-from . import get_config
+from . import FotilApp, get_config
 
 
-app = typer.Typer(
-    help='Picture processing utilities.',
-    no_args_is_help=True,
-    pretty_exceptions_enable=False,
-    context_settings={'help_option_names': ['-h', '--help']},
-)
+app = FotilApp(help='Picture processing utilities.')
 
 
-@app.command()
+@app.command(no_args_is_help=True)
 def cleanup_raw(
     raw_dir: Path,
     pic_dir: Path | None = None,

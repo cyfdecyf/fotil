@@ -20,12 +20,26 @@ cli_options = CliOptions()
 
 DEFAULT_CONFIG_PATH = Path('~/.config/fotil/fotil.toml').expanduser()
 
-app = typer.Typer(
+class FotilApp(typer.Typer):
+    """
+    Typer app that shows help when a group is invoked without a subcommand, and
+    never lets typer catch unexpected exceptions (plain tracebacks instead).
+    Commands that require arguments opt into the same behavior individually
+    with ``no_args_is_help=True`` so commands with all-optional arguments can
+    still run bare.
+    """
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('no_args_is_help', True)
+        kwargs.setdefault('pretty_exceptions_enable', False)
+        context_settings = kwargs.setdefault('context_settings', {})
+        context_settings.setdefault('help_option_names', ['-h', '--help'])
+        super().__init__(**kwargs)
+
+
+app = FotilApp(
     name='fotil',
     help='Camera photo & video utilities.',
-    no_args_is_help=True,
-    pretty_exceptions_enable=False,
-    context_settings={'help_option_names': ['-h', '--help']},
 )
 
 
