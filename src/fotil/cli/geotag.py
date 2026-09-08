@@ -298,6 +298,12 @@ def _write_gps(
     iOS uses. Also reformat coordinates to ISO-6709 since newer exiftool no
     longer accepts the "lat lon, alt" format correctly.
 
+    Picture files only get the EXIF GPS IFD tags. GPSCoordinates is a
+    QuickTime Keys / HEIF ItemList container tag: exiftool silently drops it
+    on JPEG and HEIC, and on AVIF it resolves to ItemList:GPSCoordinates whose
+    "lat lon, alt" parsing takes the altitude as longitude ("Longitude out of
+    range" warning).
+
     Args:
         exif: Exiftool instance.
         file_paths: Destination file paths.
@@ -308,7 +314,7 @@ def _write_gps(
     pic_files = [f for f in file_paths if not is_video(f)]
 
     if pic_files:
-        pic_tags = dict(tag_values)
+        pic_tags = {k: v for k, v in tag_values.items() if k != 'GPSCoordinates'}
         # exiftool drops the sign of GPSLatitude/GPSLongitude unless the Ref
         # tags are set alongside, so derive them from the signed values.
         if 'GPSLatitude' in pic_tags and 'GPSLatitudeRef' not in pic_tags:
@@ -621,11 +627,8 @@ def copy_gps(
 
     tags = tags_list[0].copy()
 
-    if 'GPSCoordinates' not in tags and 'GPSPosition' in tags and 'GPSAltitude' in tags:
-        tags['GPSCoordinates'] = f'{tags["GPSPosition"]}, {tags["GPSAltitude"]}'
-        if verbose:
-            print(f'{src} has no GPSCoordinates, add it')
-
+    # GPSPosition is a read-only composite; _write_gps rebuilds
+    # Keys:GPSCoordinates for videos from GPSLatitude/GPSLongitude itself.
     if 'GPSPosition' in tags:
         del tags['GPSPosition']
 
