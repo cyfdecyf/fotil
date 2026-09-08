@@ -650,7 +650,7 @@ def copy_gps(
 def image(
     fpaths: Annotated[
         list[Path],
-        typer.Option('--fpath', '-f', help='Files or directories to add geotag'),
+        typer.Argument(help='Files or directories to add geotag'),
     ],
     gpslog_paths: Annotated[
         list[Path], typer.Option('--gpslog', '-g', help='GPS log files')
@@ -659,6 +659,7 @@ def image(
         str,
         typer.Option('--pattern', '-p', help='Glob pattern for directories'),
     ] = '*.jpg',
+    *,
     overwrite_original: Annotated[
         bool,
         typer.Option('--overwrite', '-o', help='Overwrite original files'),
@@ -689,7 +690,7 @@ def image(
 def video(
     fpaths: Annotated[
         list[Path],
-        typer.Option('--fpath', '-f', help='Files or directories to add geotag'),
+        typer.Argument(help='Files or directories to add geotag'),
     ],
     gpslog_paths: Annotated[
         list[Path], typer.Option('--gpslog', '-g', help='GPS log files')
@@ -714,6 +715,7 @@ def video(
             '("auto": Sony TimeZone tag, else the --timezone value)',
         ),
     ] = 'auto',
+    *,
     force: Annotated[
         bool,
         typer.Option(
@@ -805,9 +807,7 @@ def video(
 
 @app.command(name='camera', no_args_is_help=True)
 def make_model(
-    fpaths: Annotated[
-        list[Path], typer.Option('--fpath', '-f', help='Files or directories')
-    ],
+    fpaths: Annotated[list[Path], typer.Argument(help='Files or directories')],
     make: Annotated[str, typer.Option('--make', '-m', help='Camera manufacturer')],
     model: Annotated[str, typer.Option('--model', '-M', help='Camera model')],
     force: Annotated[
